@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ReservaForm } from "@/components/reserva/reserva-form";
+import { Inicio } from "@/components/reserva/inicio";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -11,10 +11,11 @@ export default async function Home() {
   ]);
 
   return (
-    <ReservaForm
+    <Inicio
       servicios={servicios ?? []}
       peluqueros={peluqueros ?? []}
       asignaciones={asignaciones ?? []}
+      mercadoPagoHabilitado={Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN)}
     />
   );
 }

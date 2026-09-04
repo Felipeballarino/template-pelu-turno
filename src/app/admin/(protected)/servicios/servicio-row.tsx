@@ -53,7 +53,7 @@ export function ServicioRow({ servicio }: { servicio: Servicio }) {
             </label>
             <button
               type="submit"
-              className="rounded-md bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-800"
+              className="rounded-md bg-violet-600 px-3 py-1 text-sm text-white shadow-sm hover:bg-violet-700"
             >
               Guardar
             </button>

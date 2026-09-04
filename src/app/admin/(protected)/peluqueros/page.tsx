@@ -25,7 +25,7 @@ export default async function PeluquerosPage() {
 
       <form
         action={crearPeluquero}
-        className="flex flex-wrap items-end gap-2 rounded-lg border bg-white p-4"
+        className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
       >
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">Nombre</label>
@@ -37,25 +37,28 @@ export default async function PeluquerosPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            WhatsApp (sin +, ej. 5491122334455)
+            WhatsApp (código de área + número, sin 0 ni 15)
           </label>
-          <input
-            name="telefono_whatsapp"
-            required
-            pattern="[0-9]{10,15}"
-            title="Solo números, formato E.164 sin +"
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-          />
+          <div className="flex overflow-hidden rounded-md border border-gray-300">
+            <span className="flex items-center bg-gray-50 px-2 text-sm text-gray-500">+549</span>
+            <input
+              type="tel"
+              name="telefono_whatsapp"
+              required
+              placeholder="3534196213"
+              className="min-w-0 flex-1 px-2 py-1.5 text-sm outline-none"
+            />
+          </div>
         </div>
         <button
           type="submit"
-          className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
         >
           Agregar
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-gray-50">
             <tr>

@@ -56,3 +56,18 @@ export function construirMensajeBloqueoConflicto(params: {
   const horaTexto = normalizarHora(params.horaInicio);
   return `Hola ${params.nombreCliente}! Te escribimos de la peluquería: surgió un inconveniente con tu turno de ${params.servicioNombre} del ${fechaTexto} a las ${horaTexto}hs. Contactanos para reprogramarlo, disculpá las molestias.`;
 }
+
+/**
+ * Recordatorio que el peluquero le manda al cliente unas horas antes del
+ * turno (ver botón "Recordar" en /admin/turnos), con el link para que el
+ * cliente lo cancele él mismo si no puede ir.
+ */
+export function construirMensajeRecordatorio(params: {
+  nombreCliente: string;
+  servicioNombre: string;
+  horaInicio: string;
+  linkCancelacion: string;
+}): string {
+  const horaTexto = normalizarHora(params.horaInicio);
+  return `Hola ${params.nombreCliente}! Te recordamos tu turno de ${params.servicioNombre} hoy a las ${horaTexto}hs. Si no podés venir, cancelalo acá: ${params.linkCancelacion}`;
+}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { hoyArgentina, formatearFechaLarga } from "@/lib/date";
-import { diasDeSemana, inicioSemana, sumarDias } from "@/lib/semana";
+import { hoyArgentina, formatearFechaCorta, formatearFechaLarga } from "@/lib/date";
+import { diasDeSemana, sumarDias } from "@/lib/semana";
 import { cancelarTurno } from "../turnos/actions";
 import { CalendarGrid } from "./calendar-grid";
 
@@ -73,20 +73,19 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-semibold text-gray-900">Calendario</h1>
-        <p className="text-sm text-gray-500">
+        <p className="hidden text-sm text-gray-500 sm:block">
           Turnos, bloqueos y horario habitual en una sola vista, por semana.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white p-4">
+      <div className="space-y-3 rounded-lg border bg-white p-3 sm:p-4">
         <form className="flex items-end gap-2">
-          <input type="hidden" name="semana" value={semanaAncla} />
-          <div>
+          <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-gray-600">Peluquero</label>
             <select
               name="peluquero_id"
               defaultValue={peluqueroId}
-              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-gray-300 px-2 py-2 text-sm"
             >
               {peluqueros?.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -95,9 +94,10 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
               ))}
             </select>
           </div>
+          <input type="hidden" name="semana" value={semanaAncla} />
           <button
             type="submit"
-            className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+            className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
           >
             Ver
           </button>
@@ -106,36 +106,43 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
         <div className="flex items-center gap-2">
           <Link
             href={`/admin/calendario?${queryPeluquero}&semana=${semanaAnterior}`}
-            className="rounded-md border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-gray-600 hover:bg-gray-50"
+            aria-label="Semana anterior"
           >
-            ← Semana anterior
+            ‹
           </Link>
-          <span className="text-sm text-gray-600">
-            {formatearFechaLarga(lunes)} – {formatearFechaLarga(domingo)}
+          <span className="flex-1 truncate text-center text-sm font-medium text-gray-700">
+            <span className="sm:hidden">
+              {formatearFechaCorta(lunes)} – {formatearFechaCorta(domingo)}
+            </span>
+            <span className="hidden sm:inline">
+              {formatearFechaLarga(lunes)} – {formatearFechaLarga(domingo)}
+            </span>
           </span>
           <Link
             href={`/admin/calendario?${queryPeluquero}&semana=${semanaSiguiente}`}
-            className="rounded-md border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-gray-600 hover:bg-gray-50"
+            aria-label="Semana siguiente"
           >
-            Semana siguiente →
+            ›
           </Link>
           <Link
             href={`/admin/calendario?${queryPeluquero}&semana=${hoyArgentina()}`}
-            className="rounded-md border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            className="shrink-0 rounded-md border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
           >
             Hoy
           </Link>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 sm:gap-4 sm:text-xs">
         <span className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded border border-green-400 bg-green-100" />
           Pagado
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded border border-amber-400 bg-amber-100" />
-          Pendiente (efectivo)
+          Pendiente
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded border border-dashed border-gray-400 bg-gray-200" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { grillaMes, inicioMes, mesAnterior, mesSiguiente, nombreMes } from "@/lib/semana";
 
 const DIAS_CORTOS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -18,26 +19,39 @@ export function MiniCalendario({ value, minFecha, onChange }: MiniCalendarioProp
   const puedeRetroceder = inicioMes(mesAnterior(mesVisible)) >= inicioMes(minFecha);
 
   return (
-    <div className="rounded-lg border border-gray-200 p-3">
+    <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.9 }}
           onClick={() => setMesVisible((m) => mesAnterior(m))}
           disabled={!puedeRetroceder}
           className="rounded p-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
           aria-label="Mes anterior"
         >
           ‹
-        </button>
-        <span className="text-sm font-medium text-gray-900">{nombreMes(mesVisible)}</span>
-        <button
+        </motion.button>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={mesVisible}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15 }}
+            className="text-sm font-medium text-gray-900"
+          >
+            {nombreMes(mesVisible)}
+          </motion.span>
+        </AnimatePresence>
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.9 }}
           onClick={() => setMesVisible((m) => mesSiguiente(m))}
           className="rounded p-1 text-gray-500 hover:bg-gray-100"
           aria-label="Mes siguiente"
         >
           ›
-        </button>
+        </motion.button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-400">
@@ -53,23 +67,24 @@ export function MiniCalendario({ value, minFecha, onChange }: MiniCalendarioProp
           const deshabilitado = dia.fecha < minFecha;
           const elegido = dia.fecha === value;
           return (
-            <button
+            <motion.button
               key={dia.fecha}
               type="button"
+              whileTap={deshabilitado ? undefined : { scale: 0.88 }}
               disabled={deshabilitado}
               onClick={() => onChange(dia.fecha)}
-              className={`rounded-md py-1.5 text-sm ${
+              className={`rounded-lg py-1.5 text-sm ${
                 elegido
-                  ? "bg-gray-900 text-white"
+                  ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
                   : deshabilitado
                     ? "text-gray-300"
                     : !dia.delMesActual
                       ? "text-gray-300 hover:bg-gray-50"
-                      : "text-gray-700 hover:bg-gray-100"
+                      : "text-gray-700 hover:bg-violet-50"
               }`}
             >
               {dia.diaMes}
-            </button>
+            </motion.button>
           );
         })}
       </div>

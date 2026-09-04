@@ -31,20 +31,24 @@ export function PeluqueroRow({ peluquero, servicios, serviciosAsignadosIds }: Pe
               required
               className="rounded-md border border-gray-300 px-2 py-1 text-sm"
             />
-            <input
-              name="telefono_whatsapp"
-              defaultValue={peluquero.telefono_whatsapp}
-              required
-              placeholder="5491122334455"
-              className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-            />
+            <div className="flex overflow-hidden rounded-md border border-gray-300">
+              <span className="flex items-center bg-gray-50 px-2 text-sm text-gray-500">+549</span>
+              <input
+                type="tel"
+                name="telefono_whatsapp"
+                defaultValue={peluquero.telefono_whatsapp.replace(/^549/, "")}
+                required
+                placeholder="3534196213"
+                className="min-w-0 flex-1 px-2 py-1 text-sm outline-none"
+              />
+            </div>
             <label className="flex items-center gap-1 text-sm text-gray-600">
               <input type="checkbox" name="activo" defaultChecked={peluquero.activo} />
               Activo
             </label>
             <button
               type="submit"
-              className="rounded-md bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-800"
+              className="rounded-md bg-violet-600 px-3 py-1 text-sm text-white shadow-sm hover:bg-violet-700"
             >
               Guardar
             </button>

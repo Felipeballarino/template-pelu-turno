@@ -61,6 +61,7 @@ export interface Database {
           hora_fin: string;
           estado: EstadoTurno;
           mercado_pago_id: string | null;
+          recordatorio_enviado: boolean;
           creado_en: string;
         };
         Insert: {
@@ -74,6 +75,7 @@ export interface Database {
           hora_fin: string;
           estado?: EstadoTurno;
           mercado_pago_id?: string | null;
+          recordatorio_enviado?: boolean;
           creado_en?: string;
         };
         Update: Partial<Database["public"]["Tables"]["turnos"]["Insert"]>;

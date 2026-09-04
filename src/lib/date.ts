@@ -30,6 +30,17 @@ export function formatearFechaLarga(fechaISO: string): string {
   }).format(fecha);
 }
 
+/** Versión corta para espacios chicos (celular), ej. "31 ago". */
+export function formatearFechaCorta(fechaISO: string): string {
+  const [anio, mes, dia] = fechaISO.split("-").map(Number);
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(fecha);
+}
+
 export function formatearHora(horaHHMMSS: string): string {
   return horaHHMMSS.slice(0, 5); // "14:30:00" -> "14:30"
 }

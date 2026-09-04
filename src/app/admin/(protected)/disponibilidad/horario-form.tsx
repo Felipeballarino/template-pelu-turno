@@ -92,7 +92,7 @@ export function HorarioForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-white p-4">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       {valoresIniciales && (
         <div className="flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
           <span>Editando un horario existente.</span>
@@ -140,7 +140,7 @@ export function HorarioForm({
               key={dia}
               className={`cursor-pointer rounded-full border px-3 py-1 text-sm ${
                 diasElegidos.includes(i)
-                  ? "border-gray-900 bg-gray-900 text-white"
+                  ? "border-violet-600 bg-violet-600 text-white"
                   : "border-gray-300 text-gray-600 hover:bg-gray-50"
               }`}
             >
@@ -226,7 +226,7 @@ export function HorarioForm({
       <button
         type="submit"
         disabled={pending || diasElegidos.length === 0}
-        className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+        className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
       >
         {pending ? "Guardando..." : valoresIniciales ? "Guardar cambios" : "Agregar"}
       </button>

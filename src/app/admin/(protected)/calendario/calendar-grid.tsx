@@ -103,7 +103,7 @@ export function CalendarGrid({
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-white">
+    <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="grid min-w-[880px] grid-cols-[56px_repeat(7,1fr)]">
         {/* Encabezado */}
         <div />

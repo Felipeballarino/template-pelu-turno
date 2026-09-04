@@ -55,3 +55,15 @@ export async function cancelarTurno(id: string): Promise<CancelacionInfo | null>
     alternativas: alternativas.map((a) => ({ fecha: a.fecha, hora: a.hora })),
   };
 }
+
+/** Marca que ya se le mandó el recordatorio de hoy, para no duplicarlo. */
+export async function marcarRecordatorioEnviado(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("turnos")
+    .update({ recordatorio_enviado: true })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/turnos");
+}

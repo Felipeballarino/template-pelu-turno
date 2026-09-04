@@ -60,6 +60,7 @@ export function NuevoTurnoForm({
   // que sí lo ofrece, en vez de dejar una combinación inválida.
   useEffect(() => {
     if (servicioId && peluqueroId && !peluqueroOfreceServicio(indiceServicios, peluqueroId, servicioId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPeluqueroId(peluquerosQueOfrecen[0]?.id ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,6 +68,7 @@ export function NuevoTurnoForm({
 
   useEffect(() => {
     if (!abierto || !servicio || !peluqueroId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlots(null);
       return;
     }
@@ -132,7 +134,7 @@ export function NuevoTurnoForm({
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+        className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
       >
         + Nuevo turno
       </button>
@@ -147,7 +149,7 @@ export function NuevoTurnoForm({
     telefonoCliente.trim().length > 0;
 
   return (
-    <div className="space-y-4 rounded-lg border bg-white p-4">
+    <div className="space-y-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-700">Cargar turno manualmente</h3>
         <button type="button" onClick={resetear} className="text-xs text-gray-400 hover:text-gray-700">
@@ -212,7 +214,7 @@ export function NuevoTurnoForm({
                 onClick={() => setHoraElegida(slot.hora)}
                 className={`rounded-md border px-2 py-1.5 text-sm ${
                   horaElegida === slot.hora
-                    ? "border-gray-900 bg-gray-900 text-white"
+                    ? "border-violet-600 bg-violet-600 text-white"
                     : "border-gray-300 hover:bg-gray-50"
                 }`}
               >
@@ -232,13 +234,16 @@ export function NuevoTurnoForm({
             onChange={(e) => setNombreCliente(e.target.value)}
             className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
-          <input
-            type="tel"
-            placeholder="Teléfono del cliente"
-            value={telefonoCliente}
-            onChange={(e) => setTelefonoCliente(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
+          <div className="flex flex-1 overflow-hidden rounded-md border border-gray-300">
+            <span className="flex items-center bg-gray-50 px-2 text-sm text-gray-500">+549</span>
+            <input
+              type="tel"
+              placeholder="3534196213"
+              value={telefonoCliente}
+              onChange={(e) => setTelefonoCliente(e.target.value)}
+              className="min-w-0 flex-1 px-3 py-2 text-sm outline-none"
+            />
+          </div>
         </div>
       )}
 
@@ -249,7 +254,7 @@ export function NuevoTurnoForm({
           type="button"
           disabled={!puedeConfirmar || enviando}
           onClick={confirmar}
-          className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
         >
           {enviando ? "Guardando..." : "Guardar turno"}
         </button>

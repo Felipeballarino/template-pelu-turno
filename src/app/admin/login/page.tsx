@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import { motion } from "framer-motion";
+import { FormasFlotantes } from "@/components/formas-flotantes";
 import { login, type LoginState } from "./actions";
 
 export default function LoginPage() {
@@ -9,12 +11,28 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <form
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-b from-violet-50 via-white to-white px-4">
+      <FormasFlotantes />
+
+      <motion.form
         action={formAction}
-        className="w-full max-w-sm space-y-4 rounded-lg border bg-white p-6 shadow-sm"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="relative w-full max-w-sm space-y-4 rounded-2xl border border-gray-100 bg-white/90 p-6 shadow-xl backdrop-blur"
       >
-        <h1 className="text-xl font-semibold text-gray-900">Panel de administración</h1>
+        <motion.div
+          initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          transition={{ delay: 0.1, type: "spring", stiffness: 220, damping: 16 }}
+          className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-xl text-white shadow-lg shadow-violet-300"
+          style={{ background: "linear-gradient(145deg, #a78bfa, #7c3aed)" }}
+        >
+          ✂
+        </motion.div>
+        <h1 className="text-center text-xl font-semibold text-gray-900">
+          Panel de administración
+        </h1>
 
         <div>
           <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
@@ -26,7 +44,7 @@ export default function LoginPage() {
             type="email"
             required
             autoComplete="email"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none"
           />
         </div>
 
@@ -40,20 +58,22 @@ export default function LoginPage() {
             type="password"
             required
             autoComplete="current-password"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none"
           />
         </div>
 
         {state.error && <p className="text-sm text-red-600">{state.error}</p>}
 
-        <button
+        <motion.button
           type="submit"
+          whileTap={{ scale: 0.98 }}
           disabled={pending}
-          className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+          className="w-full rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-200 disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)" }}
         >
           {pending ? "Ingresando..." : "Ingresar"}
-        </button>
-      </form>
+        </motion.button>
+      </motion.form>
     </div>
   );
 }

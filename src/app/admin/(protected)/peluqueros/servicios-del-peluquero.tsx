@@ -66,7 +66,7 @@ export function ServiciosDelPeluquero({
                 }
                 className={`rounded-full border px-2.5 py-0.5 text-xs disabled:opacity-50 ${
                   asignado
-                    ? "border-gray-900 bg-gray-900 text-white"
+                    ? "border-violet-600 bg-violet-600 text-white"
                     : "border-gray-300 text-gray-500 hover:bg-gray-50"
                 }`}
               >

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { hoyArgentina, formatearFechaLarga } from "@/lib/date";
+import { hoyArgentina, horaActualArgentinaEnMinutos, formatearFechaLarga } from "@/lib/date";
 import { NuevoTurnoForm } from "./nuevo-turno-form";
+import { TurnoCard } from "./turno-card";
 import { TurnoRow } from "./turno-row";
 
 interface TurnosPageProps {
@@ -23,7 +24,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   let query = supabase
     .from("turnos")
     .select(
-      "id, fecha, hora_inicio, hora_fin, estado, nombre_cliente, telefono_cliente, peluqueros(nombre), servicios(nombre)"
+      "id, fecha, hora_inicio, hora_fin, estado, nombre_cliente, telefono_cliente, recordatorio_enviado, peluqueros(nombre), servicios(nombre)"
     )
     .eq("fecha", fecha)
     .order("hora_inicio", { ascending: true });
@@ -33,6 +34,36 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   }
 
   const { data: turnos, error } = await query;
+
+  // Ventana del botón "Recordar": turnos de hoy que empiezan dentro de las
+  // próximas 5hs, no cancelados y sin recordatorio ya enviado.
+  const esHoy = fecha === hoyArgentina();
+  const minutosAhora = horaActualArgentinaEnMinutos();
+
+  const filas = (turnos ?? []).map((t) => {
+    // Supabase tipa los joins a-uno como array; acá sabemos que es 1 fila.
+    const peluquero = Array.isArray(t.peluqueros) ? t.peluqueros[0] : t.peluqueros;
+    const servicio = Array.isArray(t.servicios) ? t.servicios[0] : t.servicios;
+    const [h, m] = t.hora_inicio.split(":").map(Number);
+    const minutosInicio = h * 60 + m;
+    const puedeRecordar =
+      esHoy &&
+      t.estado !== "cancelado" &&
+      !t.recordatorio_enviado &&
+      minutosInicio >= minutosAhora &&
+      minutosInicio - minutosAhora <= 300;
+    return {
+      id: t.id,
+      peluqueroNombre: peluquero?.nombre ?? "—",
+      servicioNombre: servicio?.nombre ?? "—",
+      nombreCliente: t.nombre_cliente,
+      telefonoCliente: t.telefono_cliente,
+      horaInicio: t.hora_inicio,
+      horaFin: t.hora_fin,
+      estado: t.estado,
+      puedeRecordar,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -49,7 +80,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
         peluqueroIdInicial={peluqueroId}
       />
 
-      <form className="flex flex-wrap items-end gap-2 rounded-lg border bg-white p-4">
+      <form className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">Fecha</label>
           <input
@@ -76,7 +107,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
         </div>
         <button
           type="submit"
-          className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
         >
           Filtrar
         </button>
@@ -84,7 +115,20 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
 
       {error && <p className="text-sm text-red-600">Error al cargar turnos: {error.message}</p>}
 
-      <div className="overflow-hidden rounded-lg border bg-white">
+      {/* Celular: lista de tarjetas */}
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm sm:hidden">
+        {filas.length === 0 && (
+          <p className="px-4 py-6 text-center text-sm text-gray-400">
+            No hay turnos para esta fecha.
+          </p>
+        )}
+        {filas.map((f) => (
+          <TurnoCard key={f.id} {...f} />
+        ))}
+      </div>
+
+      {/* Escritorio: tabla */}
+      <div className="hidden overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm sm:block">
         <table className="w-full text-left">
           <thead className="bg-gray-50">
             <tr>
@@ -97,31 +141,16 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
             </tr>
           </thead>
           <tbody>
-            {turnos?.length === 0 && (
+            {filas.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-400">
                   No hay turnos para esta fecha.
                 </td>
               </tr>
             )}
-            {turnos?.map((t) => {
-              // Supabase tipa los joins a-uno como array; acá sabemos que es 1 fila.
-              const peluquero = Array.isArray(t.peluqueros) ? t.peluqueros[0] : t.peluqueros;
-              const servicio = Array.isArray(t.servicios) ? t.servicios[0] : t.servicios;
-              return (
-                <TurnoRow
-                  key={t.id}
-                  id={t.id}
-                  peluqueroNombre={peluquero?.nombre ?? "—"}
-                  servicioNombre={servicio?.nombre ?? "—"}
-                  nombreCliente={t.nombre_cliente}
-                  telefonoCliente={t.telefono_cliente}
-                  horaInicio={t.hora_inicio}
-                  horaFin={t.hora_fin}
-                  estado={t.estado}
-                />
-              );
-            })}
+            {filas.map((f) => (
+              <TurnoRow key={f.id} {...f} />
+            ))}
           </tbody>
         </table>
       </div>

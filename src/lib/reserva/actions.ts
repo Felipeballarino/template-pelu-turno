@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hoyArgentina, horaActualArgentinaEnMinutos } from "@/lib/date";
 import { sumarDias } from "@/lib/semana";
 import { indiceServiciosPorPeluquero, peluqueroOfreceServicio } from "./servicios-peluquero";
+import { formatearHHMM, minutosDesdeMedianoche } from "./tiempo";
+import { crearTurnoEnBaseDeDatos, type ResultadoCrearTurno } from "./crear-turno";
 
 // Rango horario que se ofrece cuando un peluquero todavía no tiene cargado
 // un horario semanal propio (ver horarios_laborales). Se puede ajustar acá
@@ -13,19 +15,6 @@ const RANGO_DEFAULT_FIN = "20:00";
 
 // Cada cuántos minutos se ofrece un horario de inicio distinto.
 const PASO_MINUTOS = 15;
-
-function minutosDesdeMedianoche(hora: string): number {
-  const [h, m] = hora.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function formatearHHMM(minutos: number): string {
-  const h = Math.floor(minutos / 60)
-    .toString()
-    .padStart(2, "0");
-  const m = (minutos % 60).toString().padStart(2, "0");
-  return `${h}:${m}`;
-}
 
 interface Ventana {
   inicio: number;
@@ -190,20 +179,9 @@ export async function obtenerProximosHorariosDisponibles(params: {
   return resultado;
 }
 
-export interface ResultadoReserva {
-  ok: boolean;
-  error?: string;
-  turno?: {
-    peluqueroNombre: string;
-    peluqueroWhatsapp: string;
-    servicioNombre: string;
-    fecha: string;
-    horaInicio: string;
-    horaFin: string;
-    nombreCliente: string;
-  };
-}
+export type ResultadoReserva = ResultadoCrearTurno;
 
+/** Reserva pagando en efectivo en el local (turno queda pendiente_efectivo). */
 export async function crearTurnoPublico(input: {
   servicioId: string;
   peluqueroId: string;
@@ -212,84 +190,5 @@ export async function crearTurnoPublico(input: {
   nombreCliente: string;
   telefonoCliente: string;
 }): Promise<ResultadoReserva> {
-  const nombreCliente = input.nombreCliente.trim();
-  const telefonoCliente = input.telefonoCliente.trim();
-
-  if (
-    !input.servicioId ||
-    !input.peluqueroId ||
-    !input.fecha ||
-    !input.horaInicio ||
-    !nombreCliente ||
-    !telefonoCliente
-  ) {
-    return { ok: false, error: "Faltan datos para confirmar el turno." };
-  }
-
-  const supabase = createAdminClient();
-
-  const { data: servicio, error: errorServicio } = await supabase
-    .from("servicios")
-    .select("nombre, duracion_minutos")
-    .eq("id", input.servicioId)
-    .single();
-  if (errorServicio || !servicio) {
-    return { ok: false, error: "El servicio elegido ya no está disponible." };
-  }
-
-  const { data: peluquero, error: errorPeluquero } = await supabase
-    .from("peluqueros")
-    .select("nombre, telefono_whatsapp")
-    .eq("id", input.peluqueroId)
-    .single();
-  if (errorPeluquero || !peluquero) {
-    return { ok: false, error: "El peluquero elegido ya no está disponible." };
-  }
-
-  const { data: asignacionesPeluquero } = await supabase
-    .from("peluquero_servicios")
-    .select("peluquero_id, servicio_id")
-    .eq("peluquero_id", input.peluqueroId);
-  const indiceServicios = indiceServiciosPorPeluquero(asignacionesPeluquero ?? []);
-  if (!peluqueroOfreceServicio(indiceServicios, input.peluqueroId, input.servicioId)) {
-    return { ok: false, error: "Ese peluquero no ofrece el servicio elegido." };
-  }
-
-  const horaFin = formatearHHMM(
-    minutosDesdeMedianoche(input.horaInicio) + servicio.duracion_minutos
-  );
-
-  const { error: errorInsert } = await supabase.from("turnos").insert({
-    peluquero_id: input.peluqueroId,
-    servicio_id: input.servicioId,
-    nombre_cliente: nombreCliente,
-    telefono_cliente: telefonoCliente,
-    fecha: input.fecha,
-    hora_inicio: input.horaInicio,
-    hora_fin: horaFin,
-    estado: "pendiente_efectivo",
-  });
-
-  if (errorInsert) {
-    // 23P01 = exclusion_violation: el constraint turnos_no_solapados
-    // (supabase/001_schema.sql) frenó un choque de horarios porque otro
-    // cliente reservó ese mismo horario un instante antes.
-    if (errorInsert.code === "23P01") {
-      return { ok: false, error: "Ese horario se acaba de ocupar. Elegí otro, por favor." };
-    }
-    return { ok: false, error: "No se pudo confirmar el turno. Probá de nuevo." };
-  }
-
-  return {
-    ok: true,
-    turno: {
-      peluqueroNombre: peluquero.nombre,
-      peluqueroWhatsapp: peluquero.telefono_whatsapp,
-      servicioNombre: servicio.nombre,
-      fecha: input.fecha,
-      horaInicio: input.horaInicio,
-      horaFin,
-      nombreCliente,
-    },
-  };
+  return crearTurnoEnBaseDeDatos({ ...input, estado: "pendiente_efectivo" });
 }

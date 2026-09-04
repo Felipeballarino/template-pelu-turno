@@ -63,7 +63,7 @@ export function BloqueoForm({ peluqueroId }: { peluqueroId: string }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-wrap items-end gap-2 rounded-lg border bg-white p-4"
+      className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
     >
       <input type="hidden" name="peluquero_id" value={peluqueroId} />
       <div>
@@ -106,7 +106,7 @@ export function BloqueoForm({ peluqueroId }: { peluqueroId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+        className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
       >
         {pending ? "Guardando..." : "Bloquear"}
       </button>

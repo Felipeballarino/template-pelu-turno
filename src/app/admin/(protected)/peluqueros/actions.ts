@@ -2,15 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { normalizarTelefonoArgentino } from "@/lib/telefono";
 
 export async function crearPeluquero(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
-  const telefono_whatsapp = String(formData.get("telefono_whatsapp") ?? "").trim();
+  const telefonoInput = String(formData.get("telefono_whatsapp") ?? "").trim();
 
-  if (!nombre || !telefono_whatsapp) {
+  if (!nombre || !telefonoInput) {
     throw new Error("Nombre y teléfono son obligatorios.");
   }
 
+  const telefono_whatsapp = normalizarTelefonoArgentino(telefonoInput);
   const supabase = await createClient();
   const { error } = await supabase.from("peluqueros").insert({ nombre, telefono_whatsapp });
   if (error) throw new Error(error.message);
@@ -20,13 +22,14 @@ export async function crearPeluquero(formData: FormData) {
 
 export async function actualizarPeluquero(id: string, formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
-  const telefono_whatsapp = String(formData.get("telefono_whatsapp") ?? "").trim();
+  const telefonoInput = String(formData.get("telefono_whatsapp") ?? "").trim();
   const activo = formData.get("activo") === "on";
 
-  if (!nombre || !telefono_whatsapp) {
+  if (!nombre || !telefonoInput) {
     throw new Error("Nombre y teléfono son obligatorios.");
   }
 
+  const telefono_whatsapp = normalizarTelefonoArgentino(telefonoInput);
   const supabase = await createClient();
   const { error } = await supabase
     .from("peluqueros")

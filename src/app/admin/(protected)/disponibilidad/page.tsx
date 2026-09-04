@@ -103,7 +103,7 @@ export default async function DisponibilidadPage({ searchParams }: Disponibilida
         </p>
       </div>
 
-      <form className="flex items-end gap-2 rounded-lg border bg-white p-4">
+      <form className="flex items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">Peluquero</label>
           <select
@@ -120,7 +120,7 @@ export default async function DisponibilidadPage({ searchParams }: Disponibilida
         </div>
         <button
           type="submit"
-          className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
         >
           Ver
         </button>
@@ -148,7 +148,7 @@ export default async function DisponibilidadPage({ searchParams }: Disponibilida
         <div>
           <h2 className="text-base font-semibold text-gray-900">Bloqueos puntuales</h2>
           <p className="text-sm text-gray-500">
-            Para marcar un momento específico como no disponible (ej. "hoy de 16 a 17").
+            Para marcar un momento específico como no disponible (ej. &quot;hoy de 16 a 17&quot;).
           </p>
         </div>
 
@@ -158,7 +158,7 @@ export default async function DisponibilidadPage({ searchParams }: Disponibilida
           <p className="text-sm text-red-600">Error al cargar bloqueos: {errorBloqueos.message}</p>
         )}
 
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
           <table className="w-full text-left">
             <thead className="bg-gray-50">
               <tr>

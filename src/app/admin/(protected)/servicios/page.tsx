@@ -19,7 +19,7 @@ export default async function ServiciosPage() {
 
       <form
         action={crearServicio}
-        className="flex flex-wrap items-end gap-2 rounded-lg border bg-white p-4"
+        className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
       >
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">Nombre</label>
@@ -52,13 +52,13 @@ export default async function ServiciosPage() {
         </div>
         <button
           type="submit"
-          className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
         >
           Agregar
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-gray-50">
             <tr>
