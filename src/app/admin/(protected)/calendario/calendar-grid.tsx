@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { DiaSemana } from "@/lib/semana";
 import type { EstadoTurno, HorarioLaboral } from "@/types/database";
-import { DIAS_SEMANA, formatearHora } from "@/lib/date";
+import { DIAS_SEMANA, formatearHora, hoyArgentina, horaActualArgentinaEnMinutos } from "@/lib/date";
 import { construirLinkWhatsApp, construirMensajeCancelacion } from "@/lib/whatsapp";
 import type { CancelacionInfo } from "../turnos/actions";
 
@@ -102,22 +103,50 @@ export function CalendarGrid({
     (_, i) => HORA_INICIO_GRILLA + i
   );
 
+  // Línea de "ahora": se calcula solo en el cliente (evita desajustes de
+  // hidratación) y se refresca cada minuto mientras la pantalla está abierta.
+  const [ahoraMinutos, setAhoraMinutos] = useState<number | null>(null);
+  useEffect(() => {
+    function actualizar() {
+      setAhoraMinutos(horaActualArgentinaEnMinutos());
+    }
+    actualizar();
+    const id = setInterval(actualizar, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const hoy = hoyArgentina();
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
       <div className="grid min-w-[880px] grid-cols-[56px_repeat(7,1fr)]">
         {/* Encabezado */}
-        <div />
-        {dias.map((dia) => (
-          <div key={dia.fecha} className="border-b border-l px-2 py-2 text-center">
-            <div className="text-xs font-medium uppercase text-gray-500">
-              {DIAS_SEMANA[dia.diaSemanaIndex].slice(0, 3)}
+        <div className="sticky left-0 z-20 bg-white" />
+        {dias.map((dia) => {
+          const esHoy = dia.fecha === hoy;
+          return (
+            <div
+              key={dia.fecha}
+              className={`border-b border-l px-2 py-2 text-center ${esHoy ? "bg-violet-50" : ""}`}
+            >
+              <div
+                className={`text-xs font-medium uppercase ${esHoy ? "text-violet-500" : "text-gray-500"}`}
+              >
+                {DIAS_SEMANA[dia.diaSemanaIndex].slice(0, 3)}
+              </div>
+              <div
+                className={`mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold ${
+                  esHoy ? "bg-violet-600 text-white" : "text-gray-900"
+                }`}
+              >
+                {dia.fecha.slice(8, 10)}
+              </div>
             </div>
-            <div className="text-sm font-semibold text-gray-900">{dia.fecha.slice(8, 10)}</div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Columna de horas */}
-        <div className="relative border-b" style={{ height: ALTO_GRILLA }}>
+        <div className="sticky left-0 z-10 relative border-b bg-white" style={{ height: ALTO_GRILLA }}>
           {horas.map((h) => (
             <div
               key={h}
@@ -134,11 +163,21 @@ export function CalendarGrid({
           const cerrados = segmentosCerrados(dia.diaSemanaIndex, horarios);
           const turnosDelDia = turnos.filter((t) => t.fecha === dia.fecha);
           const bloqueosDelDia = bloqueos.filter((b) => b.fecha === dia.fecha);
+          const esHoy = dia.fecha === hoy;
+          const lineaAhoraTop =
+            esHoy && ahoraMinutos !== null
+              ? clamp(ahoraMinutos - HORA_INICIO_GRILLA * 60, 0, ALTO_GRILLA)
+              : null;
+          const mostrarLineaAhora =
+            esHoy &&
+            ahoraMinutos !== null &&
+            ahoraMinutos >= HORA_INICIO_GRILLA * 60 &&
+            ahoraMinutos <= HORA_FIN_GRILLA * 60;
 
           return (
             <div
               key={dia.fecha}
-              className="relative border-b border-l"
+              className={`relative border-b border-l ${esHoy ? "bg-violet-50/30" : ""}`}
               style={{
                 height: ALTO_GRILLA,
                 backgroundImage:
@@ -215,6 +254,16 @@ export function CalendarGrid({
                   </button>
                 );
               })}
+
+              {mostrarLineaAhora && lineaAhoraTop !== null && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-10 flex items-center"
+                  style={{ top: lineaAhoraTop }}
+                >
+                  <div className="h-1.5 w-1.5 -translate-x-px rounded-full bg-red-500" />
+                  <div className="h-px flex-1 bg-red-500" />
+                </div>
+              )}
             </div>
           );
         })}

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarTelefonoArgentino } from "@/lib/telefono";
+import { subirFotoOpcional } from "@/lib/supabase/fotos";
 
 export async function crearPeluquero(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -14,7 +15,8 @@ export async function crearPeluquero(formData: FormData) {
 
   const telefono_whatsapp = normalizarTelefonoArgentino(telefonoInput);
   const supabase = await createClient();
-  const { error } = await supabase.from("peluqueros").insert({ nombre, telefono_whatsapp });
+  const foto_url = await subirFotoOpcional(supabase, formData, "foto", "peluqueros");
+  const { error } = await supabase.from("peluqueros").insert({ nombre, telefono_whatsapp, foto_url });
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/peluqueros");
@@ -31,9 +33,11 @@ export async function actualizarPeluquero(id: string, formData: FormData) {
 
   const telefono_whatsapp = normalizarTelefonoArgentino(telefonoInput);
   const supabase = await createClient();
+  // Si no se eligió una foto nueva, no se toca foto_url (se conserva la que ya había).
+  const foto_url = await subirFotoOpcional(supabase, formData, "foto", "peluqueros");
   const { error } = await supabase
     .from("peluqueros")
-    .update({ nombre, telefono_whatsapp, activo })
+    .update({ nombre, telefono_whatsapp, activo, ...(foto_url !== undefined && { foto_url }) })
     .eq("id", id);
   if (error) throw new Error(error.message);
 

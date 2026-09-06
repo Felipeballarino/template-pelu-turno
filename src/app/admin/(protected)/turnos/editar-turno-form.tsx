@@ -1,47 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
-import { formatearFechaLarga, hoyArgentina } from "@/lib/date";
-import {
-  crearTurnoPublico,
-  obtenerHorariosDisponibles,
-  type SlotDisponible,
-} from "@/lib/reserva/actions";
+import { useEffect, useRef, useState } from "react";
+import { Check, X } from "lucide-react";
+import { formatearFechaLarga, formatearHora, hoyArgentina } from "@/lib/date";
+import { obtenerHorariosDisponibles, type SlotDisponible } from "@/lib/reserva/actions";
+import { construirLinkWhatsApp, construirMensajeReprogramacion } from "@/lib/whatsapp";
 import type { Peluquero, Servicio } from "@/types/database";
 import {
   indiceServiciosPorPeluquero,
   peluqueroOfreceServicio,
   type AsignacionServicio,
 } from "@/lib/reserva/servicios-peluquero";
+import { actualizarTurno } from "./actions";
 
-interface NuevoTurnoFormProps {
+interface EditarTurnoFormProps {
+  turnoId: string;
+  nombreCliente: string;
   servicios: Servicio[];
   peluqueros: Peluquero[];
   asignaciones: AsignacionServicio[];
-  fechaInicial: string;
+  servicioIdInicial: string;
   peluqueroIdInicial: string;
+  fechaInicial: string;
+  horaInicioInicial: string;
+  onCancelar: () => void;
+  onGuardado: () => void;
 }
 
-/**
- * Carga manual de un turno desde el panel — típicamente para cuando un
- * cliente responde el aviso de cancelación pidiendo otro horario y el
- * peluquero se lo agenda directamente, sin que el cliente tenga que volver
- * a pasar por la reserva pública. Reutiliza la misma lógica de horarios
- * libres y de creación que usa esa pantalla pública.
- */
-export function NuevoTurnoForm({
+/** Formulario de edición de un turno existente, embebido en su tarjeta. */
+export function EditarTurnoForm({
+  turnoId,
+  nombreCliente,
   servicios,
   peluqueros,
   asignaciones,
-  fechaInicial,
+  servicioIdInicial,
   peluqueroIdInicial,
-}: NuevoTurnoFormProps) {
-  const router = useRouter();
-  const [abierto, setAbierto] = useState(false);
-  const [servicioId, setServicioId] = useState(servicios[0]?.id ?? "");
-  const [peluqueroId, setPeluqueroId] = useState(peluqueroIdInicial || peluqueros[0]?.id || "");
+  fechaInicial,
+  horaInicioInicial,
+  onCancelar,
+  onGuardado,
+}: EditarTurnoFormProps) {
+  const [servicioId, setServicioId] = useState(servicioIdInicial);
+  const [peluqueroId, setPeluqueroId] = useState(peluqueroIdInicial);
   const [fecha, setFecha] = useState(fechaInicial);
   const indiceServicios = indiceServiciosPorPeluquero(asignaciones);
   const peluquerosQueOfrecen = servicioId
@@ -49,16 +50,13 @@ export function NuevoTurnoForm({
     : peluqueros;
   const [slots, setSlots] = useState<SlotDisponible[] | null>(null);
   const [cargandoSlots, setCargandoSlots] = useState(false);
-  const [horaElegida, setHoraElegida] = useState<string | null>(null);
-  const [nombreCliente, setNombreCliente] = useState("");
-  const [telefonoCliente, setTelefonoCliente] = useState("");
+  const [horaElegida, setHoraElegida] = useState<string | null>(formatearHora(horaInicioInicial));
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const primerRender = useRef(true);
 
   const servicio = servicios.find((s) => s.id === servicioId);
 
-  // Si el peluquero elegido no ofrece el nuevo servicio, se cae al primero
-  // que sí lo ofrece, en vez de dejar una combinación inválida.
   useEffect(() => {
     if (servicioId && peluqueroId && !peluqueroOfreceServicio(indiceServicios, peluqueroId, servicioId)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -68,12 +66,18 @@ export function NuevoTurnoForm({
   }, [servicioId]);
 
   useEffect(() => {
-    if (!abierto || !servicio || !peluqueroId) {
+    if (!servicio || !peluqueroId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlots(null);
       return;
     }
-    setHoraElegida(null);
+    // Al cambiar servicio/peluquero/fecha después del primer render, la hora
+    // elegida deja de ser válida (era relativa a la combinación anterior).
+    if (!primerRender.current) {
+      setHoraElegida(null);
+    }
+    primerRender.current = false;
+
     let cancelado = false;
     setCargandoSlots(true);
     obtenerHorariosDisponibles({
@@ -81,6 +85,7 @@ export function NuevoTurnoForm({
       servicioId: servicio.id,
       fecha,
       duracionMinutos: servicio.duracion_minutos,
+      excluirTurnoId: turnoId,
     })
       .then((resultado) => {
         if (!cancelado) setSlots(resultado);
@@ -92,71 +97,55 @@ export function NuevoTurnoForm({
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto, servicioId, peluqueroId, fecha]);
+  }, [servicioId, peluqueroId, fecha]);
 
-  function resetear() {
-    setAbierto(false);
-    setHoraElegida(null);
-    setNombreCliente("");
-    setTelefonoCliente("");
-    setError(null);
-  }
-
-  async function confirmar() {
-    if (!servicio || !peluqueroId || !horaElegida || !nombreCliente.trim() || !telefonoCliente.trim()) {
-      return;
-    }
+  async function guardar() {
+    if (!servicio || !peluqueroId || !horaElegida) return;
     setEnviando(true);
     setError(null);
     try {
-      const resultado = await crearTurnoPublico({
+      const resultado = await actualizarTurno(turnoId, {
         servicioId: servicio.id,
         peluqueroId,
         fecha,
         horaInicio: horaElegida,
-        nombreCliente,
-        telefonoCliente,
       });
-      if (!resultado.ok) {
-        setError(resultado.error ?? "No se pudo cargar el turno.");
+      if (!resultado.ok || !resultado.info) {
+        setError(resultado.error ?? "No se pudo guardar el turno.");
         return;
       }
-      resetear();
-      router.refresh();
+      const cambioHorarioOPeluquero =
+        fecha !== fechaInicial || horaElegida !== formatearHora(horaInicioInicial) || peluqueroId !== peluqueroIdInicial;
+      if (cambioHorarioOPeluquero) {
+        const mensaje = construirMensajeReprogramacion({
+          nombreCliente,
+          servicioNombre: resultado.info.servicioNombre,
+          fecha: resultado.info.fecha,
+          horaInicio: resultado.info.horaInicio,
+        });
+        window.open(
+          construirLinkWhatsApp(resultado.info.telefonoCliente, mensaje),
+          "_blank",
+          "noopener,noreferrer"
+        );
+      }
+      onGuardado();
     } catch {
-      setError("No se pudo cargar el turno. Probá de nuevo.");
+      setError("No se pudo guardar el turno. Probá de nuevo.");
     } finally {
       setEnviando(false);
     }
   }
 
-  if (!abierto) {
-    return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
-      >
-        <Plus className="h-4 w-4" strokeWidth={2} />
-        Nuevo turno
-      </button>
-    );
-  }
-
-  const puedeConfirmar =
-    Boolean(servicio) &&
-    Boolean(peluqueroId) &&
-    Boolean(horaElegida) &&
-    nombreCliente.trim().length > 0 &&
-    telefonoCliente.trim().length > 0;
+  const puedeGuardar = Boolean(servicio) && Boolean(peluqueroId) && Boolean(horaElegida);
 
   return (
-    <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="space-y-4 rounded-xl border border-violet-200 bg-violet-50/40 p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700">Cargar turno manualmente</h3>
+        <h3 className="text-sm font-semibold text-gray-700">Editar turno de {nombreCliente}</h3>
         <button
           type="button"
-          onClick={resetear}
+          onClick={onCancelar}
           className="flex items-center gap-1 rounded-md p-1 text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-700"
         >
           <X className="h-3.5 w-3.5" strokeWidth={2} />
@@ -170,7 +159,7 @@ export function NuevoTurnoForm({
           <select
             value={servicioId}
             onChange={(e) => setServicioId(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
           >
             {servicios.map((s) => (
               <option key={s.id} value={s.id}>
@@ -184,7 +173,7 @@ export function NuevoTurnoForm({
           <select
             value={peluqueroId}
             onChange={(e) => setPeluqueroId(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
           >
             {peluquerosQueOfrecen.map((p) => (
               <option key={p.id} value={p.id}>
@@ -200,11 +189,11 @@ export function NuevoTurnoForm({
             min={hoyArgentina()}
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
           />
         </div>
       </div>
-      <p className="text-xs text-gray-400">{formatearFechaLarga(fecha)}</p>
+      <p className="text-xs text-gray-400 capitalize">{formatearFechaLarga(fecha)}</p>
 
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">Horario</label>
@@ -222,7 +211,7 @@ export function NuevoTurnoForm({
                 className={`rounded-md border px-2 py-1.5 text-sm ${
                   horaElegida === slot.hora
                     ? "border-violet-600 bg-violet-600 text-white"
-                    : "border-gray-300 hover:bg-gray-50"
+                    : "border-gray-300 bg-white hover:bg-gray-50"
                 }`}
               >
                 {slot.hora}
@@ -232,40 +221,17 @@ export function NuevoTurnoForm({
         )}
       </div>
 
-      {horaElegida && (
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            placeholder="Nombre del cliente"
-            value={nombreCliente}
-            onChange={(e) => setNombreCliente(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-          <div className="flex flex-1 overflow-hidden rounded-md border border-gray-300">
-            <span className="flex items-center bg-gray-50 px-2 text-sm text-gray-500">+549</span>
-            <input
-              type="tel"
-              placeholder="3534196213"
-              value={telefonoCliente}
-              onChange={(e) => setTelefonoCliente(e.target.value)}
-              className="min-w-0 flex-1 px-3 py-2 text-sm outline-none"
-            />
-          </div>
-        </div>
-      )}
-
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {horaElegida && (
-        <button
-          type="button"
-          disabled={!puedeConfirmar || enviando}
-          onClick={confirmar}
-          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
-        >
-          {enviando ? "Guardando..." : "Guardar turno"}
-        </button>
-      )}
+      <button
+        type="button"
+        disabled={!puedeGuardar || enviando}
+        onClick={guardar}
+        className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-50"
+      >
+        <Check className="h-4 w-4" strokeWidth={2} />
+        {enviando ? "Guardando..." : "Guardar cambios"}
+      </button>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { subirFotoOpcional } from "@/lib/supabase/fotos";
 
 export async function crearServicio(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -13,7 +14,10 @@ export async function crearServicio(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("servicios").insert({ nombre, duracion_minutos, precio });
+  const foto_url = await subirFotoOpcional(supabase, formData, "foto", "servicios");
+  const { error } = await supabase
+    .from("servicios")
+    .insert({ nombre, duracion_minutos, precio, foto_url });
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/servicios");
@@ -30,9 +34,11 @@ export async function actualizarServicio(id: string, formData: FormData) {
   }
 
   const supabase = await createClient();
+  // Si no se eligió una foto nueva, no se toca foto_url (se conserva la que ya había).
+  const foto_url = await subirFotoOpcional(supabase, formData, "foto", "servicios");
   const { error } = await supabase
     .from("servicios")
-    .update({ nombre, duracion_minutos, precio, activo })
+    .update({ nombre, duracion_minutos, precio, activo, ...(foto_url !== undefined && { foto_url }) })
     .eq("id", id);
   if (error) throw new Error(error.message);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { CalendarDays, Clock, Ban } from "lucide-react";
 import { hoyArgentina } from "@/lib/date";
 import { construirLinkWhatsApp, construirMensajeBloqueoConflicto } from "@/lib/whatsapp";
 import { crearBloqueo, verificarConflictosBloqueo } from "./actions";
@@ -63,51 +64,61 @@ export function BloqueoForm({ peluqueroId }: { peluqueroId: string }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+      className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
     >
       <input type="hidden" name="peluquero_id" value={peluqueroId} />
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">Fecha</label>
-        <input
-          type="date"
-          name="fecha"
-          required
-          min={hoy}
-          defaultValue={hoy}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-        />
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-violet-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100">
+          <CalendarDays className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
+          <input
+            type="date"
+            name="fecha"
+            required
+            min={hoy}
+            defaultValue={hoy}
+            className="bg-transparent text-sm text-gray-900 outline-none"
+          />
+        </label>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">Desde</label>
-        <input
-          type="time"
-          name="hora_inicio"
-          required
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-        />
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-violet-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100">
+          <Clock className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
+          <input
+            type="time"
+            name="hora_inicio"
+            required
+            className="bg-transparent text-sm text-gray-900 outline-none"
+          />
+        </label>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">Hasta</label>
-        <input
-          type="time"
-          name="hora_fin"
-          required
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-        />
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-violet-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100">
+          <Clock className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
+          <input
+            type="time"
+            name="hora_fin"
+            required
+            className="bg-transparent text-sm text-gray-900 outline-none"
+          />
+        </label>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">Motivo (opcional)</label>
         <input
           name="motivo"
           placeholder="Turno médico, etc."
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100"
         />
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-50"
       >
+        <Ban className="h-4 w-4" strokeWidth={1.8} />
         {pending ? "Guardando..." : "Bloquear"}
       </button>
       {error && <p className="w-full text-sm text-red-600">{error}</p>}

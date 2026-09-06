@@ -1,114 +1,39 @@
-"use client";
+import { DIAS_SEMANA } from "@/lib/date";
+import { DiaHorario, type Franja } from "./dia-horario";
+import type { HorarioLaboral } from "@/types/database";
 
-import { useRef, useState } from "react";
-import { formatearDias, formatearHora } from "@/lib/date";
-import { eliminarHorariosLaborales } from "./actions";
-import { EliminarButton } from "./eliminar-button";
-import { HorarioForm, type ValoresHorario } from "./horario-form";
-
-export interface FranjaGrupo {
-  hora_inicio: string;
-  hora_fin: string;
-  ids: string[];
-}
-
-export interface GrupoHorario {
-  dias: number[];
-  franjas: FranjaGrupo[];
-}
-
-function claveGrupo(g: GrupoHorario): string {
-  return g.dias.join(",");
-}
+// Orden de visualización: Lunes a Domingo (los índices de dia_semana en la
+// base siguen la convención de Date.getDay(): 0 = Domingo).
+const ORDEN_DIAS = [1, 2, 3, 4, 5, 6, 0];
 
 export function HorariosSection({
   peluqueroId,
-  grupos,
+  horarios,
 }: {
   peluqueroId: string;
-  grupos: GrupoHorario[];
+  horarios: HorarioLaboral[];
 }) {
-  const [edicion, setEdicion] = useState<{ clave: string; valores: ValoresHorario } | null>(null);
-  const formRef = useRef<HTMLDivElement>(null);
-
-  function editarGrupo(g: GrupoHorario) {
-    const [franja1, franja2] = g.franjas;
-    setEdicion({
-      clave: claveGrupo(g),
-      valores: {
-        dias: g.dias,
-        horaInicio1: franja1.hora_inicio,
-        horaFin1: franja1.hora_fin,
-        horaInicio2: franja2?.hora_inicio,
-        horaFin2: franja2?.hora_fin,
-        idsOriginales: g.franjas.flatMap((f) => f.ids),
-      },
-    });
-    // Lleva la vista al formulario para que sea obvio qué se está editando,
-    // sobre todo si la tabla de horarios es larga.
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const porDia = new Map<number, Franja[]>();
+  for (const h of horarios) {
+    const lista = porDia.get(h.dia_semana) ?? [];
+    lista.push({ id: h.id, hora_inicio: h.hora_inicio, hora_fin: h.hora_fin });
+    porDia.set(h.dia_semana, lista);
+  }
+  for (const lista of porDia.values()) {
+    lista.sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
   }
 
   return (
-    <>
-      <div ref={formRef}>
-        <HorarioForm
-          key={edicion?.clave ?? "nuevo"}
+    <div className="space-y-2.5">
+      {ORDEN_DIAS.map((dia) => (
+        <DiaHorario
+          key={dia}
           peluqueroId={peluqueroId}
-          valoresIniciales={edicion?.valores}
-          onCancelarEdicion={() => setEdicion(null)}
-          onGuardado={() => setEdicion(null)}
+          diaIndex={dia}
+          nombreDia={DIAS_SEMANA[dia]}
+          franjas={porDia.get(dia) ?? []}
         />
-      </div>
-
-      <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Día</th>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Horario</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {grupos.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-400">
-                  Sin horario fijo cargado (disponible siempre).
-                </td>
-              </tr>
-            )}
-            {grupos.map((g) => {
-              const clave = claveGrupo(g);
-              const idsDelGrupo = g.franjas.flatMap((f) => f.ids);
-              const textoHorario = g.franjas
-                .map((f) => `${formatearHora(f.hora_inicio)}–${formatearHora(f.hora_fin)}`)
-                .join(" y ");
-              return (
-                <tr key={clave} className="border-b">
-                  <td className="px-4 py-2 text-sm text-gray-900">{formatearDias(g.dias)}</td>
-                  <td className="px-4 py-2 text-sm text-gray-600">{textoHorario}</td>
-                  <td className="px-4 py-2 text-right text-sm">
-                    <button
-                      onClick={() => editarGrupo(g)}
-                      className="mr-3 text-gray-600 hover:text-gray-900"
-                    >
-                      Editar
-                    </button>
-                    <EliminarButton
-                      confirmMessage={`¿Eliminar el horario de ${formatearDias(g.dias)} (${textoHorario})?`}
-                      onDelete={() => {
-                        if (edicion?.clave === clave) setEdicion(null);
-                        eliminarHorariosLaborales(idsDelGrupo);
-                      }}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
+      ))}
+    </div>
   );
 }

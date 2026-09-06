@@ -17,6 +17,7 @@ export interface Database {
           nombre: string;
           telefono_whatsapp: string;
           activo: boolean;
+          foto_url: string | null;
           creado_en: string;
         };
         Insert: {
@@ -24,6 +25,7 @@ export interface Database {
           nombre: string;
           telefono_whatsapp: string;
           activo?: boolean;
+          foto_url?: string | null;
           creado_en?: string;
         };
         Update: Partial<Database["public"]["Tables"]["peluqueros"]["Insert"]>;
@@ -36,6 +38,7 @@ export interface Database {
           duracion_minutos: number;
           precio: number;
           activo: boolean;
+          foto_url: string | null;
           creado_en: string;
         };
         Insert: {
@@ -44,6 +47,7 @@ export interface Database {
           duracion_minutos: number;
           precio: number;
           activo?: boolean;
+          foto_url?: string | null;
           creado_en?: string;
         };
         Update: Partial<Database["public"]["Tables"]["servicios"]["Insert"]>;

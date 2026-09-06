@@ -4,18 +4,22 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatearFechaLarga, formatearHora, hoyArgentina } from "@/lib/date";
-import { construirLinkWhatsApp } from "@/lib/whatsapp";
+import { construirLinkWhatsApp, construirMensajeAvisoPeluqueroReprogramacion } from "@/lib/whatsapp";
 import { cancelarTurnoCliente } from "@/lib/reserva/cancelacion-cliente";
+import { EditarHorarioTurno } from "@/components/reserva/editar-horario-turno";
 import type { TurnoParaCancelar } from "@/lib/reserva/cancelacion-cliente";
 
 function construirMensajeAvisoPeluquero(turno: TurnoParaCancelar): string {
   return `Hola ${turno.peluqueroNombre}! Soy ${turno.nombreCliente}, te aviso que cancelé mi turno de ${turno.servicioNombre} del ${formatearFechaLarga(turno.fecha)} a las ${formatearHora(turno.horaInicio)}hs.`;
 }
 
-export function CancelarTurnoView({ turno }: { turno: TurnoParaCancelar | null }) {
+export function CancelarTurnoView({ turno: turnoInicial }: { turno: TurnoParaCancelar | null }) {
+  const [turno, setTurno] = useState(turnoInicial);
+  const [editandoHorario, setEditandoHorario] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelado, setCancelado] = useState(turno?.estado === "cancelado");
+  const [reprogramado, setReprogramado] = useState(false);
 
   if (!turno) {
     return (
@@ -60,6 +64,43 @@ export function CancelarTurnoView({ turno }: { turno: TurnoParaCancelar | null }
     );
   }
 
+  if (editandoHorario) {
+    return (
+      <Layout titulo="Cambiar horario">
+        <EditarHorarioTurno
+          turno={turno}
+          onCancelar={() => setEditandoHorario(false)}
+          onGuardado={(nuevaFecha, nuevaHora, nuevaHoraFin) => {
+            if (turno.peluqueroWhatsapp) {
+              const mensaje = construirMensajeAvisoPeluqueroReprogramacion({
+                peluqueroNombre: turno.peluqueroNombre,
+                nombreCliente: turno.nombreCliente,
+                servicioNombre: turno.servicioNombre,
+                fechaAnterior: turno.fecha,
+                horaInicioAnterior: turno.horaInicio,
+                fechaNueva: nuevaFecha,
+                horaInicioNueva: nuevaHora,
+              });
+              window.open(
+                construirLinkWhatsApp(turno.peluqueroWhatsapp, mensaje),
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }
+            setTurno({
+              ...turno,
+              fecha: nuevaFecha,
+              horaInicio: nuevaHora,
+              horaFin: nuevaHoraFin,
+            });
+            setEditandoHorario(false);
+            setReprogramado(true);
+          }}
+        />
+      </Layout>
+    );
+  }
+
   return (
     <Layout titulo="Tu turno">
       <div className="space-y-2 rounded-2xl border border-gray-200 bg-violet-50 px-4 py-3 text-sm text-gray-700 shadow-sm">
@@ -81,11 +122,23 @@ export function CancelarTurnoView({ turno }: { turno: TurnoParaCancelar | null }
         </p>
       </div>
 
+      {reprogramado && (
+        <p className="mt-3 text-sm text-emerald-600">Tu turno quedó reprogramado con éxito.</p>
+      )}
+
       {yaPaso ? (
         <p className="mt-4 text-sm text-gray-400">Este turno ya pasó.</p>
       ) : (
         <>
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setEditandoHorario(true)}
+            className="mt-4 w-full rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-medium text-violet-700 hover:bg-violet-100"
+          >
+            Cambiar día u horario
+          </motion.button>
           <motion.button
             type="button"
             whileTap={{ scale: 0.98 }}

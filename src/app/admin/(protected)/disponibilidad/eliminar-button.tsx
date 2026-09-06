@@ -1,5 +1,7 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
+
 export function EliminarButton({
   confirmMessage,
   onDelete,
@@ -12,9 +14,10 @@ export function EliminarButton({
       onClick={() => {
         if (confirm(confirmMessage)) onDelete();
       }}
-      className="text-red-600 hover:text-red-800"
+      title="Eliminar"
+      className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50"
     >
-      Eliminar
+      <Trash2 className="h-4 w-4" strokeWidth={1.8} />
     </button>
   );
 }

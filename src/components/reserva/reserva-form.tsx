@@ -609,8 +609,8 @@ function ConfirmacionReserva({ turno }: { turno: TurnoConfirmado }) {
       </Link>
 
       <div className="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
-        ¿Necesitás cancelar más adelante? Guardá este link (hacé captura de pantalla o agregalo a
-        favoritos):
+        ¿Necesitás cancelar o cambiar el día u horario más adelante? Guardá este link (hacé
+        captura de pantalla o agregalo a favoritos):
         <br />
         <a href={`/cancelar/${turno.id}`} className="break-all text-violet-700 underline">
           /cancelar/{turno.id}

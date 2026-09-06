@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatearFechaLarga, formatearHora } from "@/lib/date";
-import { construirLinkWhatsApp } from "@/lib/whatsapp";
+import { construirLinkWhatsApp, construirMensajeAvisoPeluqueroReprogramacion } from "@/lib/whatsapp";
 import {
   buscarTurnosPorTelefono,
   cancelarTurnoCliente,
   type TurnoBusqueda,
 } from "@/lib/reserva/cancelacion-cliente";
+import { EditarHorarioTurno } from "./editar-horario-turno";
 
 function construirMensajeAvisoPeluquero(turno: TurnoBusqueda): string {
   return `Hola ${turno.peluqueroNombre}! Cancelé mi turno de ${turno.servicioNombre} del ${formatearFechaLarga(turno.fecha)} a las ${formatearHora(turno.horaInicio)}hs.`;
@@ -21,6 +22,7 @@ export function CancelarPorTelefono({ onVolver }: { onVolver: () => void }) {
   const [turnos, setTurnos] = useState<TurnoBusqueda[]>([]);
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [canceladosIds, setCanceladosIds] = useState<string[]>([]);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function buscar() {
@@ -73,7 +75,7 @@ export function CancelarPorTelefono({ onVolver }: { onVolver: () => void }) {
           ‹
         </motion.button>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Cancelar un turno</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Mi turno</h1>
           <p className="text-sm text-gray-500">Buscá con el teléfono que usaste al reservar.</p>
         </div>
       </div>
@@ -116,6 +118,50 @@ export function CancelarPorTelefono({ onVolver }: { onVolver: () => void }) {
         <AnimatePresence initial={false}>
           {turnos.map((t, i) => {
             const cancelado = canceladosIds.includes(t.id);
+
+            if (!cancelado && editandoId === t.id) {
+              return (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <EditarHorarioTurno
+                    turno={t}
+                    onCancelar={() => setEditandoId(null)}
+                    onGuardado={(nuevaFecha, nuevaHora, nuevaHoraFin) => {
+                      if (t.peluqueroWhatsapp) {
+                        const mensaje = construirMensajeAvisoPeluqueroReprogramacion({
+                          peluqueroNombre: t.peluqueroNombre,
+                          nombreCliente: t.nombreCliente,
+                          servicioNombre: t.servicioNombre,
+                          fechaAnterior: t.fecha,
+                          horaInicioAnterior: t.horaInicio,
+                          fechaNueva: nuevaFecha,
+                          horaInicioNueva: nuevaHora,
+                        });
+                        window.open(
+                          construirLinkWhatsApp(t.peluqueroWhatsapp, mensaje),
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                      }
+                      setTurnos((actual) =>
+                        actual.map((x) =>
+                          x.id === t.id
+                            ? { ...x, fecha: nuevaFecha, horaInicio: nuevaHora, horaFin: nuevaHoraFin }
+                            : x
+                        )
+                      );
+                      setEditandoId(null);
+                    }}
+                  />
+                </motion.div>
+              );
+            }
+
             return (
               <motion.div
                 key={t.id}
@@ -135,15 +181,25 @@ export function CancelarPorTelefono({ onVolver }: { onVolver: () => void }) {
                 {cancelado ? (
                   <span className="shrink-0 text-xs font-medium text-gray-400">Cancelado ✓</span>
                 ) : (
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.94 }}
-                    disabled={cancelandoId === t.id}
-                    onClick={() => cancelar(t)}
-                    className="shrink-0 rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {cancelandoId === t.id ? "Cancelando..." : "Cancelar"}
-                  </motion.button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => setEditandoId(t.id)}
+                      className="rounded-full border border-violet-200 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-50"
+                    >
+                      Cambiar horario
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.94 }}
+                      disabled={cancelandoId === t.id}
+                      onClick={() => cancelar(t)}
+                      className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {cancelandoId === t.id ? "Cancelando..." : "Cancelar"}
+                    </motion.button>
+                  </div>
                 )}
               </motion.div>
             );

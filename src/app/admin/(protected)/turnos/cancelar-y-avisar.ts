@@ -3,8 +3,7 @@ import { cancelarTurno, marcarRecordatorioEnviado } from "./actions";
 
 /**
  * Cancela un turno y le avisa al cliente por WhatsApp con horarios
- * alternativos. Compartido entre TurnoRow (tabla, escritorio) y TurnoCard
- * (tarjeta, celular) para no duplicar la lógica.
+ * alternativos. Usado desde TurnoCard.
  */
 export async function cancelarYAvisar(id: string, nombreCliente: string) {
   if (!confirm(`¿Cancelar el turno de ${nombreCliente}?`)) return;

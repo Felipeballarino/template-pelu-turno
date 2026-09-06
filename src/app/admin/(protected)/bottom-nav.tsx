@@ -55,12 +55,21 @@ function IconoDisponibilidad() {
   );
 }
 
+function IconoEstadisticas() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} className="h-5 w-5">
+      <path d="M4.5 20V10M12 20V4M19.5 20v-7" stroke="currentColor" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const ITEMS = [
   { href: "/admin/calendario", label: "Calendario", Icono: IconoCalendario },
   { href: "/admin/turnos", label: "Turnos", Icono: IconoTurnos },
   { href: "/admin/peluqueros", label: "Peluqueros", Icono: IconoPeluqueros },
   { href: "/admin/servicios", label: "Servicios", Icono: IconoServicios },
   { href: "/admin/disponibilidad", label: "Horarios", Icono: IconoDisponibilidad },
+  { href: "/admin/estadisticas", label: "Stats", Icono: IconoEstadisticas },
 ] as const;
 
 /**
@@ -73,26 +82,26 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden">
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-6">
         {ITEMS.map(({ href, label, Icono }) => {
           const activo = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}
               href={href}
-              className={`relative flex flex-col items-center gap-0.5 py-2 text-[11px] transition-colors ${
+              className={`relative flex flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] transition-colors ${
                 activo ? "text-violet-600" : "text-gray-400"
               }`}
             >
               {activo && (
                 <motion.div
                   layoutId="bottom-nav-activo"
-                  className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-violet-600"
+                  className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-violet-600"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
               <Icono />
-              {label}
+              <span className="w-full truncate text-center">{label}</span>
             </Link>
           );
         })}

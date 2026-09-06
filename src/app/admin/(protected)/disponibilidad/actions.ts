@@ -61,6 +61,28 @@ export async function crearHorarioLaboral(formData: FormData) {
   revalidatePath("/admin/disponibilidad");
 }
 
+/** Actualiza el horario de una franja existente, sin cambiar su día. */
+export async function actualizarHorarioLaboral(id: string, horaInicioInput: string, horaFinInput: string) {
+  const hora_inicio = normalizarHora(horaInicioInput);
+  const hora_fin = normalizarHora(horaFinInput);
+
+  if (!hora_inicio || !hora_fin) {
+    throw new Error("Completá el horario.");
+  }
+  if (hora_fin <= hora_inicio) {
+    throw new Error("El horario de fin tiene que ser posterior al de inicio.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("horarios_laborales")
+    .update({ hora_inicio, hora_fin })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/disponibilidad");
+}
+
 export async function eliminarHorarioLaboral(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("horarios_laborales").delete().eq("id", id);

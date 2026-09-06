@@ -110,7 +110,7 @@ export function Inicio(props: InicioProps) {
                 onClick={() => setVista("cancelar")}
                 className="w-full rounded-2xl border border-gray-200 bg-white/90 px-4 py-4 text-base font-medium text-gray-700 shadow-md backdrop-blur hover:bg-white"
               >
-                Cancelar un turno
+                Cambiar o cancelar un turno
               </motion.button>
             </motion.div>
           </motion.div>

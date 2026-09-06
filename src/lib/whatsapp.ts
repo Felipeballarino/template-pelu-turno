@@ -58,6 +58,43 @@ export function construirMensajeBloqueoConflicto(params: {
 }
 
 /**
+ * Mensaje al cliente cuando el admin reprograma su turno desde el panel
+ * (cambia día, horario, peluquero o servicio) sin que el cliente lo pida.
+ */
+export function construirMensajeReprogramacion(params: {
+  nombreCliente: string;
+  servicioNombre: string;
+  fecha: string;
+  horaInicio: string;
+}): string {
+  const fechaTexto = formatearFechaLarga(params.fecha);
+  const horaTexto = normalizarHora(params.horaInicio);
+  return `Hola ${params.nombreCliente}! Te escribimos de la peluquería: te reprogramamos tu turno de ${params.servicioNombre} para el ${fechaTexto} a las ${horaTexto}hs. Cualquier inconveniente, avisanos.`;
+}
+
+/**
+ * Mensaje al PELUQUERO cuando es el cliente el que cambia el día/horario de
+ * su propio turno (desde /cancelar/[id] o desde "Cambiar o cancelar un
+ * turno" buscando por teléfono en la home).
+ */
+export function construirMensajeAvisoPeluqueroReprogramacion(params: {
+  peluqueroNombre: string;
+  nombreCliente: string;
+  servicioNombre: string;
+  fechaAnterior: string;
+  horaInicioAnterior: string;
+  fechaNueva: string;
+  horaInicioNueva: string;
+}): string {
+  const fechaAnteriorTexto = formatearFechaLarga(params.fechaAnterior);
+  const horaAnteriorTexto = normalizarHora(params.horaInicioAnterior);
+  const fechaNuevaTexto = formatearFechaLarga(params.fechaNueva);
+  const horaNuevaTexto = normalizarHora(params.horaInicioNueva);
+
+  return `Hola ${params.peluqueroNombre}! Soy ${params.nombreCliente}, cambié mi turno de ${params.servicioNombre} del ${fechaAnteriorTexto} a las ${horaAnteriorTexto}hs para el ${fechaNuevaTexto} a las ${horaNuevaTexto}hs.`;
+}
+
+/**
  * Recordatorio que el peluquero le manda al cliente unas horas antes del
  * turno (ver botón "Recordar" en /admin/turnos), con el link para que el
  * cliente lo cancele él mismo si no puede ir.
@@ -69,5 +106,5 @@ export function construirMensajeRecordatorio(params: {
   linkCancelacion: string;
 }): string {
   const horaTexto = normalizarHora(params.horaInicio);
-  return `Hola ${params.nombreCliente}! Te recordamos tu turno de ${params.servicioNombre} hoy a las ${horaTexto}hs. Si no podés venir, cancelalo acá: ${params.linkCancelacion}`;
+  return `Hola ${params.nombreCliente}! Te recordamos tu turno de ${params.servicioNombre} hoy a las ${horaTexto}hs. Si no podés venir o querés cambiar el horario, entrá acá: ${params.linkCancelacion}`;
 }

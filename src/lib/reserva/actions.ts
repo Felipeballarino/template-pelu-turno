@@ -32,6 +32,8 @@ export async function obtenerHorariosDisponibles(params: {
   servicioId: string;
   fecha: string; // YYYY-MM-DD
   duracionMinutos: number;
+  /** Turno que se está reprogramando: no cuenta como "ocupado" contra sí mismo. */
+  excluirTurnoId?: string;
 }): Promise<SlotDisponible[]> {
   const supabase = createAdminClient();
 
@@ -52,6 +54,16 @@ export async function obtenerHorariosDisponibles(params: {
   // dia_semana: 0 domingo ... 6 sábado, mismo criterio que horarios_laborales.
   const diaSemana = new Date(`${params.fecha}T00:00:00Z`).getUTCDay();
 
+  let queryTurnos = supabase
+    .from("turnos")
+    .select("peluquero_id, hora_inicio, hora_fin")
+    .in("peluquero_id", idsCandidatos)
+    .eq("fecha", params.fecha)
+    .neq("estado", "cancelado");
+  if (params.excluirTurnoId) {
+    queryTurnos = queryTurnos.neq("id", params.excluirTurnoId);
+  }
+
   const [{ data: horarios }, { data: bloqueos }, { data: turnos }] = await Promise.all([
     supabase
       .from("horarios_laborales")
@@ -62,12 +74,7 @@ export async function obtenerHorariosDisponibles(params: {
       .select("peluquero_id, hora_inicio, hora_fin")
       .in("peluquero_id", idsCandidatos)
       .eq("fecha", params.fecha),
-    supabase
-      .from("turnos")
-      .select("peluquero_id, hora_inicio, hora_fin")
-      .in("peluquero_id", idsCandidatos)
-      .eq("fecha", params.fecha)
-      .neq("estado", "cancelado"),
+    queryTurnos,
   ]);
 
   const inicioDefault = minutosDesdeMedianoche(RANGO_DEFAULT_INICIO);

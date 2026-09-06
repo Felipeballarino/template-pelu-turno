@@ -1,8 +1,9 @@
+import { CalendarDays, User, Filter, ListChecks, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hoyArgentina, horaActualArgentinaEnMinutos, formatearFechaLarga } from "@/lib/date";
 import { NuevoTurnoForm } from "./nuevo-turno-form";
 import { TurnoCard } from "./turno-card";
-import { TurnoRow } from "./turno-row";
+import { StatTile } from "../stat-tile";
 
 interface TurnosPageProps {
   searchParams: Promise<{ fecha?: string; peluquero_id?: string }>;
@@ -24,7 +25,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   let query = supabase
     .from("turnos")
     .select(
-      "id, fecha, hora_inicio, hora_fin, estado, nombre_cliente, telefono_cliente, recordatorio_enviado, peluqueros(nombre), servicios(nombre)"
+      "id, fecha, hora_inicio, hora_fin, estado, nombre_cliente, telefono_cliente, recordatorio_enviado, peluquero_id, servicio_id, peluqueros(nombre), servicios(nombre)"
     )
     .eq("fecha", fecha)
     .order("hora_inicio", { ascending: true });
@@ -35,8 +36,8 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
 
   const { data: turnos, error } = await query;
 
-  // Ventana del botón "Recordar": turnos de hoy que empiezan dentro de las
-  // próximas 5hs, no cancelados y sin recordatorio ya enviado.
+  // Ventana del botón "Recordar": cualquier turno de hoy que todavía no
+  // empezó, no esté cancelado y sin recordatorio ya enviado.
   const esHoy = fecha === hoyArgentina();
   const minutosAhora = horaActualArgentinaEnMinutos();
 
@@ -46,30 +47,52 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
     const servicio = Array.isArray(t.servicios) ? t.servicios[0] : t.servicios;
     const [h, m] = t.hora_inicio.split(":").map(Number);
     const minutosInicio = h * 60 + m;
+    const [hFin, mFin] = t.hora_fin.split(":").map(Number);
+    const minutosFin = hFin * 60 + mFin;
     const puedeRecordar =
       esHoy &&
       t.estado !== "cancelado" &&
       !t.recordatorio_enviado &&
-      minutosInicio >= minutosAhora &&
-      minutosInicio - minutosAhora <= 300;
+      minutosInicio >= minutosAhora;
+    const enCurso =
+      esHoy &&
+      t.estado !== "cancelado" &&
+      minutosAhora >= minutosInicio &&
+      minutosAhora < minutosFin;
     return {
       id: t.id,
+      peluqueroId: t.peluquero_id,
+      servicioId: t.servicio_id,
       peluqueroNombre: peluquero?.nombre ?? "—",
       servicioNombre: servicio?.nombre ?? "—",
       nombreCliente: t.nombre_cliente,
       telefonoCliente: t.telefono_cliente,
+      fecha: t.fecha,
       horaInicio: t.hora_inicio,
       horaFin: t.hora_fin,
       estado: t.estado,
       puedeRecordar,
+      enCurso,
     };
   });
+
+  const totalDia = filas.length;
+  const pagadosDia = filas.filter((f) => f.estado === "pagado").length;
+  const pendientesDia = filas.filter((f) => f.estado === "pendiente_efectivo").length;
+  const canceladosDia = filas.filter((f) => f.estado === "cancelado").length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold text-gray-900">Turnos</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900">Turnos</h1>
         <p className="text-sm text-gray-500 capitalize">{formatearFechaLarga(fecha)}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <StatTile icono={ListChecks} valor={totalDia} etiqueta="Turnos del día" color="violeta" />
+        <StatTile icono={CheckCircle2} valor={pagadosDia} etiqueta="Pagados" color="verde" />
+        <StatTile icono={Clock3} valor={pendientesDia} etiqueta="Pendientes" color="ambar" />
+        <StatTile icono={XCircle} valor={canceladosDia} etiqueta="Cancelados" color="gris" />
       </div>
 
       <NuevoTurnoForm
@@ -80,79 +103,57 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
         peluqueroIdInicial={peluqueroId}
       />
 
-      <form className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Fecha</label>
+      <form className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+        <label className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-violet-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100">
+          <CalendarDays className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
           <input
             type="date"
             name="fecha"
             defaultValue={fecha}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full min-w-0 bg-transparent text-sm text-gray-900 outline-none"
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Peluquero</label>
+        </label>
+        <label className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-violet-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100">
+          <User className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
           <select
             name="peluquero_id"
             defaultValue={peluqueroId}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full min-w-0 bg-transparent text-sm text-gray-900 outline-none"
           >
-            <option value="">Todos</option>
+            <option value="">Todos los peluqueros</option>
             {peluqueros?.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nombre}
               </option>
             ))}
           </select>
-        </div>
+        </label>
         <button
           type="submit"
-          className="rounded-md bg-violet-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
+          className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
         >
+          <Filter className="h-4 w-4" strokeWidth={1.8} />
           Filtrar
         </button>
       </form>
 
       {error && <p className="text-sm text-red-600">Error al cargar turnos: {error.message}</p>}
 
-      {/* Celular: lista de tarjetas */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm sm:hidden">
+      <div className="space-y-2.5">
         {filas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-gray-400">
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-400">
             No hay turnos para esta fecha.
-          </p>
+          </div>
         )}
         {filas.map((f) => (
-          <TurnoCard key={f.id} {...f} />
+          <TurnoCard
+            key={f.id}
+            {...f}
+            peluqueros={peluqueros ?? []}
+            servicios={servicios ?? []}
+            asignaciones={asignaciones ?? []}
+          />
         ))}
-      </div>
-
-      {/* Escritorio: tabla */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm sm:block">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Horario</th>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Peluquero</th>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Servicio</th>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Cliente</th>
-              <th className="px-4 py-2 text-xs font-medium uppercase text-gray-500">Estado</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-400">
-                  No hay turnos para esta fecha.
-                </td>
-              </tr>
-            )}
-            {filas.map((f) => (
-              <TurnoRow key={f.id} {...f} />
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );
