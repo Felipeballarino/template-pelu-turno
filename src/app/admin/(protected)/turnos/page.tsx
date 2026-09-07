@@ -4,6 +4,8 @@ import { hoyArgentina, horaActualArgentinaEnMinutos, formatearFechaLarga } from 
 import { NuevoTurnoForm } from "./nuevo-turno-form";
 import { TurnoCard } from "./turno-card";
 import { StatTile } from "../stat-tile";
+import { marcarTurnosPasadosComoPagados } from "@/lib/turnos/completar-pagos";
+import { AutoRefresh } from "../auto-refresh";
 
 interface TurnosPageProps {
   searchParams: Promise<{ fecha?: string; peluquero_id?: string }>;
@@ -15,6 +17,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
   const peluqueroId = params.peluquero_id || "";
 
   const supabase = await createClient();
+  await marcarTurnosPasadosComoPagados(supabase);
 
   const [{ data: peluqueros }, { data: servicios }, { data: asignaciones }] = await Promise.all([
     supabase.from("peluqueros").select("*").eq("activo", true).order("nombre"),
@@ -83,6 +86,7 @@ export default async function TurnosPage({ searchParams }: TurnosPageProps) {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-gray-900">Turnos</h1>
         <p className="text-sm text-gray-500 capitalize">{formatearFechaLarga(fecha)}</p>

@@ -6,6 +6,8 @@ import { diasDeSemana, sumarDias } from "@/lib/semana";
 import { cancelarTurno } from "../turnos/actions";
 import { CalendarGrid } from "./calendar-grid";
 import { StatTile } from "../stat-tile";
+import { marcarTurnosPasadosComoPagados } from "@/lib/turnos/completar-pagos";
+import { AutoRefresh } from "../auto-refresh";
 
 interface CalendarioPageProps {
   searchParams: Promise<{ peluquero_id?: string; semana?: string }>;
@@ -14,6 +16,7 @@ interface CalendarioPageProps {
 export default async function CalendarioPage({ searchParams }: CalendarioPageProps) {
   const params = await searchParams;
   const supabase = await createClient();
+  await marcarTurnosPasadosComoPagados(supabase);
 
   const { data: peluqueros } = await supabase
     .from("peluqueros")
@@ -78,6 +81,7 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
 
   return (
     <div className="space-y-4">
+      <AutoRefresh />
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-gray-900">Calendario</h1>
         <p className="hidden text-sm text-gray-500 sm:block">

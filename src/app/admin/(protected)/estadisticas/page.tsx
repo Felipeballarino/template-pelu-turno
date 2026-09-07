@@ -5,6 +5,7 @@ import { hoyArgentina, formatearFechaLarga } from "@/lib/date";
 import { inicioSemana, inicioMes, mesSiguiente, sumarDias } from "@/lib/semana";
 import { StatTile } from "../stat-tile";
 import { RankingList, type RankingItem } from "./ranking-list";
+import { marcarTurnosPasadosComoPagados } from "@/lib/turnos/completar-pagos";
 
 interface EstadisticasPageProps {
   searchParams: Promise<{ periodo?: string }>;
@@ -19,6 +20,7 @@ export default async function EstadisticasPage({ searchParams }: EstadisticasPag
   const hasta = periodo === "mes" ? sumarDias(mesSiguiente(hoy), -1) : sumarDias(desde, 6);
 
   const supabase = await createClient();
+  await marcarTurnosPasadosComoPagados(supabase);
   const { data: turnos, error } = await supabase
     .from("turnos")
     .select("id, estado, servicios(nombre), peluqueros(nombre)")
