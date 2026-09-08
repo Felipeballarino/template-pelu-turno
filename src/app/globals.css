@@ -12,12 +12,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/*
+ * Esta app usa colores claros fijos en todos sus componentes (bg-white,
+ * text-gray-900, etc.), no está pensada para modo oscuro. Si se deja que
+ * el fondo cambie solo según el tema del sistema, el texto oscuro queda
+ * sobre fondo oscuro y se ve mal, así que se fuerza siempre el tema claro.
+ */
 
 body {
   background: var(--background);

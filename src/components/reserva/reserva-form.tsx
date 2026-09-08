@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatearFechaLarga, hoyArgentina } from "@/lib/date";
 import {
@@ -241,7 +241,7 @@ export function ReservaForm({
   }
 
   if (reserva) {
-    return <ConfirmacionReserva turno={reserva} />;
+    return <ConfirmacionReserva turno={reserva} onVolver={onVolver} />;
   }
 
   const puedeConfirmar =
@@ -394,10 +394,19 @@ export function ReservaForm({
                     className="flex flex-col items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-center shadow-sm transition hover:border-violet-300 hover:shadow-md"
                   >
                     <span
-                      className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-md"
+                      className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-white shadow-md"
                       style={{ background: gradiente }}
                     >
-                      {iniciales}
+                      {p.foto_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.foto_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        iniciales
+                      )}
                     </span>
                     <span className="text-sm font-medium">{p.nombre}</span>
                   </motion.button>
@@ -560,7 +569,14 @@ export function ReservaForm({
   );
 }
 
-function ConfirmacionReserva({ turno }: { turno: TurnoConfirmado }) {
+function ConfirmacionReserva({
+  turno,
+  onVolver,
+}: {
+  turno: TurnoConfirmado;
+  onVolver?: () => void;
+}) {
+  const router = useRouter();
   const linkWhatsApp = construirLinkWhatsApp(turno);
 
   return (
@@ -601,12 +617,13 @@ function ConfirmacionReserva({ turno }: { turno: TurnoConfirmado }) {
         {turno.peluqueroNombre}.
       </p>
 
-      <Link
-        href="/"
+      <button
+        type="button"
+        onClick={() => (onVolver ? onVolver() : router.push("/"))}
         className="inline-flex w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         Volver al inicio
-      </Link>
+      </button>
 
       <div className="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
         ¿Necesitás cancelar o cambiar el día u horario más adelante? Guardá este link (hacé

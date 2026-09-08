@@ -1,8 +1,6 @@
-import { UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { crearPeluquero } from "./actions";
 import { PeluqueroRow } from "./peluquero-row";
-import { FotoInput } from "../foto-input";
+import { NuevoPeluqueroForm } from "./nuevo-peluquero-form";
 
 export default async function PeluquerosPage() {
   const supabase = await createClient();
@@ -28,42 +26,7 @@ export default async function PeluquerosPage() {
         <p className="text-sm text-gray-500">Alta y servicios asignados a cada peluquero.</p>
       </div>
 
-      <form
-        action={crearPeluquero}
-        className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
-      >
-        <FotoInput name="foto" label="Foto (opcional)" forma="circulo" />
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Nombre</label>
-          <input
-            name="nombre"
-            required
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">
-            WhatsApp (código de área + número, sin 0 ni 15)
-          </label>
-          <div className="flex overflow-hidden rounded-lg border border-gray-300 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100">
-            <span className="flex items-center bg-gray-50 px-2 text-sm text-gray-500">+549</span>
-            <input
-              type="tel"
-              name="telefono_whatsapp"
-              required
-              placeholder="3534196213"
-              className="min-w-0 flex-1 px-3 py-2 text-sm outline-none"
-            />
-          </div>
-        </div>
-        <button
-          type="submit"
-          className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
-        >
-          <UserPlus className="h-4 w-4" strokeWidth={1.8} />
-          Agregar
-        </button>
-      </form>
+      <NuevoPeluqueroForm />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {peluqueros.length === 0 && (

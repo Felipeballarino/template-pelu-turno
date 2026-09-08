@@ -36,13 +36,17 @@ export function ServiciosDelPeluquero({
           onChange={(e) => {
             const marcado = e.target.checked;
             startTransition(async () => {
-              if (marcado) {
-                await quitarTodasLasAsignaciones(peluqueroId);
-              } else {
-                await establecerTodosLosServicios(
-                  peluqueroId,
-                  servicios.map((s) => s.id)
-                );
+              try {
+                if (marcado) {
+                  await quitarTodasLasAsignaciones(peluqueroId);
+                } else {
+                  await establecerTodosLosServicios(
+                    peluqueroId,
+                    servicios.map((s) => s.id)
+                  );
+                }
+              } catch (err) {
+                alert(err instanceof Error ? err.message : "No se pudo actualizar.");
               }
             });
           }}
@@ -61,7 +65,11 @@ export function ServiciosDelPeluquero({
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    await toggleServicioPeluquero(peluqueroId, s.id, !asignado);
+                    try {
+                      await toggleServicioPeluquero(peluqueroId, s.id, !asignado);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "No se pudo actualizar.");
+                    }
                   })
                 }
                 className={`rounded-full border px-2.5 py-0.5 text-xs disabled:opacity-50 ${

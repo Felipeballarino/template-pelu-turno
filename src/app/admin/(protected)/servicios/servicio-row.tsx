@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Pencil, Trash2, Clock, Check, X, Scissors } from "lucide-react";
 import type { Servicio } from "@/types/database";
 import { actualizarServicio, eliminarServicio } from "./actions";
@@ -15,14 +15,37 @@ const formatoPrecio = new Intl.NumberFormat("es-AR", {
 /** Tarjeta de servicio, con edición inline. */
 export function ServicioRow({ servicio }: { servicio: Servicio }) {
   const [editando, setEditando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [eliminando, startEliminar] = useTransition();
+  const [pendienteGuardar, startGuardar] = useTransition();
+
+  function handleEliminar() {
+    if (!confirm(`¿Eliminar "${servicio.nombre}"? Esta acción no se puede deshacer.`)) return;
+    startEliminar(async () => {
+      try {
+        await eliminarServicio(servicio.id);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "No se pudo eliminar el servicio.");
+      }
+    });
+  }
 
   if (editando) {
     return (
       <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 shadow-sm">
         <form
-          action={async (formData) => {
-            await actualizarServicio(servicio.id, formData);
-            setEditando(false);
+          onSubmit={(event) => {
+            event.preventDefault();
+            setError(null);
+            const formData = new FormData(event.currentTarget);
+            startGuardar(async () => {
+              try {
+                await actualizarServicio(servicio.id, formData);
+                setEditando(false);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "No se pudo guardar el servicio.");
+              }
+            });
           }}
           className="flex flex-wrap items-end gap-2"
         >
@@ -66,11 +89,12 @@ export function ServicioRow({ servicio }: { servicio: Servicio }) {
           <div className="ml-auto flex items-center gap-1">
             <button
               type="submit"
+              disabled={pendienteGuardar}
               title="Guardar"
-              className="flex items-center gap-1 rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700"
+              className="flex items-center gap-1 rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-50"
             >
               <Check className="h-4 w-4" strokeWidth={2} />
-              Guardar
+              {pendienteGuardar ? "Guardando..." : "Guardar"}
             </button>
             <button
               type="button"
@@ -81,6 +105,7 @@ export function ServicioRow({ servicio }: { servicio: Servicio }) {
               <X className="h-4 w-4" strokeWidth={2} />
             </button>
           </div>
+          {error && <p className="w-full text-sm text-red-600">{error}</p>}
         </form>
       </div>
     );
@@ -128,13 +153,10 @@ export function ServicioRow({ servicio }: { servicio: Servicio }) {
           <Pencil className="h-4 w-4" strokeWidth={1.8} />
         </button>
         <button
-          onClick={() => {
-            if (confirm(`¿Eliminar "${servicio.nombre}"? Esta acción no se puede deshacer.`)) {
-              eliminarServicio(servicio.id);
-            }
-          }}
+          onClick={handleEliminar}
+          disabled={eliminando}
           title="Eliminar"
-          className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50"
+          className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
         >
           <Trash2 className="h-4 w-4" strokeWidth={1.8} />
         </button>
