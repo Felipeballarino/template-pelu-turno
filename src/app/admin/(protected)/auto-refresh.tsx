@@ -11,9 +11,12 @@ import { useRouter } from "next/navigation";
  * horario), para que no dependan de que alguien recargue o navegue.
  *
  * Además de la revalidación periódica, se refresca apenas la pestaña
- * vuelve a estar visible/enfocada: si alguien deja el panel abierto en
- * segundo plano, el navegador frena los timers y la próxima actualización
- * podría tardar; al volver a mirarla, conviene que ya esté al día.
+ * vuelve a estar visible: si alguien deja el panel abierto en segundo
+ * plano, el navegador frena los timers y la próxima actualización podría
+ * tardar; al volver a mirarla, conviene que ya esté al día. Solo se
+ * escucha "visibilitychange" (cambio real de pestaña/app) y no "focus":
+ * ese evento puede dispararse en momentos raros del ciclo de navegación
+ * interna de Next.js y pisarse con una transición de ruta en curso.
  */
 export function AutoRefresh({ intervaloMs = 20_000 }: { intervaloMs?: number }) {
   const router = useRouter();
@@ -25,12 +28,10 @@ export function AutoRefresh({ intervaloMs = 20_000 }: { intervaloMs?: number }) 
       if (document.visibilityState === "visible") router.refresh();
     }
     document.addEventListener("visibilitychange", alVolverAEstarVisible);
-    window.addEventListener("focus", alVolverAEstarVisible);
 
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", alVolverAEstarVisible);
-      window.removeEventListener("focus", alVolverAEstarVisible);
     };
   }, [router, intervaloMs]);
 
