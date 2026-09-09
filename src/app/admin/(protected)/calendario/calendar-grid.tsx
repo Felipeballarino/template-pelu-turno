@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { DiaSemana } from "@/lib/semana";
 import type { EstadoTurno, HorarioLaboral } from "@/types/database";
 import { DIAS_SEMANA, formatearHora, hoyArgentina, horaActualArgentinaEnMinutos } from "@/lib/date";
-import { construirLinkWhatsApp, construirMensajeCancelacion } from "@/lib/whatsapp";
+import { abrirPestanaEnBlanco, completarPestanaWhatsApp, construirMensajeCancelacion } from "@/lib/whatsapp";
 import type { CancelacionInfo } from "../turnos/actions";
 
 // Rango horario que muestra la grilla. Se puede ajustar acá si una
@@ -102,6 +102,30 @@ export function CalendarGrid({
     { length: HORA_FIN_GRILLA - HORA_INICIO_GRILLA + 1 },
     (_, i) => HORA_INICIO_GRILLA + i
   );
+
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+
+  async function cancelar(t: TurnoCalendario) {
+    if (t.estado === "cancelado" || cancelandoId) return;
+    if (!confirm(`¿Cancelar el turno de ${t.nombre_cliente}?`)) return;
+
+    const pestana = abrirPestanaEnBlanco();
+
+    setCancelandoId(t.id);
+    try {
+      const info = await onCancelarTurno(t.id);
+      if (!info) {
+        pestana?.close();
+        return;
+      }
+      completarPestanaWhatsApp(pestana, info.telefonoCliente, construirMensajeCancelacion(info));
+    } catch (e) {
+      pestana?.close();
+      alert(e instanceof Error ? e.message : "No se pudo cancelar el turno.");
+    } finally {
+      setCancelandoId(null);
+    }
+  }
 
   // Línea de "ahora": se calcula solo en el cliente (evita desajustes de
   // hidratación) y se refresca cada minuto mientras la pantalla está abierta.
@@ -230,27 +254,18 @@ export function CalendarGrid({
                   0,
                   ALTO_GRILLA
                 );
+                const cancelandoEste = cancelandoId === t.id;
                 return (
                   <button
                     key={t.id}
-                    onClick={async () => {
-                      if (t.estado === "cancelado") return;
-                      if (!confirm(`¿Cancelar el turno de ${t.nombre_cliente}?`)) return;
-                      const info = await onCancelarTurno(t.id);
-                      if (!info) return;
-                      const mensaje = construirMensajeCancelacion(info);
-                      window.open(
-                        construirLinkWhatsApp(info.telefonoCliente, mensaje),
-                        "_blank",
-                        "noopener,noreferrer"
-                      );
-                    }}
-                    className={`absolute inset-x-0.5 overflow-hidden rounded border px-1 text-left text-[11px] leading-tight ${ESTADO_COLOR[t.estado]}`}
+                    onClick={() => cancelar(t)}
+                    disabled={cancelandoEste}
+                    className={`absolute inset-x-0.5 overflow-hidden rounded border px-1 text-left text-[11px] leading-tight disabled:opacity-60 ${ESTADO_COLOR[t.estado]}`}
                     style={{ top: inicio, height: Math.max(fin - inicio, 16) }}
                     title={`${t.nombre_cliente} · ${t.servicioNombre} · ${formatearHora(t.hora_inicio)}–${formatearHora(t.hora_fin)}`}
                   >
                     <span className="font-medium">{formatearHora(t.hora_inicio)}</span>{" "}
-                    {t.nombre_cliente}
+                    {cancelandoEste ? "Cancelando..." : t.nombre_cliente}
                   </button>
                 );
               })}

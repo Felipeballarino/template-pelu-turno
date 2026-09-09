@@ -10,6 +10,7 @@ import {
   type SlotDisponible,
 } from "@/lib/reserva/actions";
 import { crearPreferenciaMercadoPago } from "@/lib/reserva/mercadopago-actions";
+import { abrirPestanaEnBlanco } from "@/lib/whatsapp";
 import type { Peluquero, Servicio } from "@/types/database";
 import {
   indiceServiciosPorPeluquero,
@@ -169,6 +170,14 @@ export function ReservaForm({
     if (!servicio || !slotElegido || !nombreCliente.trim() || !telefonoCliente.trim()) return;
     setEnviando(true);
     setErrorEnvio(null);
+
+    // La pestaña de WhatsApp se abre acá, en blanco, ANTES de esperar la
+    // respuesta del servidor (ver abrirPestanaEnBlanco en lib/whatsapp.ts
+    // para el motivo). Si el navegador la bloquea igual (ej. algunos
+    // bloqueadores estrictos), pestanaWhatsApp queda null y no rompe nada:
+    // el botón manual de la pantalla de confirmación sigue como respaldo.
+    const pestanaWhatsApp = abrirPestanaEnBlanco();
+
     try {
       const resultado = await crearTurnoPublico({
         servicioId: servicio.id,
@@ -179,6 +188,7 @@ export function ReservaForm({
         telefonoCliente,
       });
       if (!resultado.ok || !resultado.turno) {
+        pestanaWhatsApp?.close();
         setErrorEnvio(resultado.error ?? "No se pudo confirmar el turno.");
         // El horario pudo haberse ocupado justo ahora: refrescamos la lista
         // y volvemos al paso de horarios para que elija otro.
@@ -198,13 +208,13 @@ export function ReservaForm({
       }
       // El turno ya quedó reservado en la base pase lo que pase acá abajo:
       // el aviso por WhatsApp es una notificación best-effort al peluquero,
-      // no una condición para que la reserva sea válida. Se intenta abrir
-      // automáticamente en una pestaña nueva; si el navegador bloquea el
-      // popup, el botón de la pantalla de confirmación queda como respaldo
-      // para mandarlo manualmente.
-      window.open(construirLinkWhatsApp(resultado.turno), "_blank", "noopener,noreferrer");
+      // no una condición para que la reserva sea válida.
+      if (pestanaWhatsApp) {
+        pestanaWhatsApp.location.href = construirLinkWhatsApp(resultado.turno);
+      }
       setReserva(resultado.turno);
     } catch {
+      pestanaWhatsApp?.close();
       setErrorEnvio("No se pudo confirmar el turno. Revisá tu conexión y probá de nuevo.");
     } finally {
       setEnviando(false);

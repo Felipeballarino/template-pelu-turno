@@ -60,7 +60,7 @@ function FranjaRow({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 transition-opacity ${pending ? "opacity-60" : ""}`}>
       <label className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-violet-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100">
         <Clock className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.8} />
         <input
@@ -87,8 +87,9 @@ function FranjaRow({
       <button
         type="button"
         title={esUnica ? "Quitar este día" : "Quitar este horario"}
+        disabled={pending}
         onClick={() => onQuitar(franja.id)}
-        className="shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+        className="shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
       >
         <Minus className="h-4 w-4" strokeWidth={1.8} />
       </button>
@@ -139,7 +140,9 @@ export function DiaHorario({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div
+      className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-opacity ${pending ? "opacity-60" : ""}`}
+    >
       <label className="flex items-center gap-2 text-sm font-medium text-gray-900">
         <input
           type="checkbox"

@@ -35,7 +35,33 @@ export function TurnoCard({
   asignaciones,
 }: TurnoCardProps) {
   const [recordado, setRecordado] = useState(false);
+  const [recordando, setRecordando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const [editando, setEditando] = useState(false);
+
+  async function handleRecordar() {
+    setRecordando(true);
+    const resultado = await recordarYMarcar({
+      id,
+      nombreCliente,
+      telefonoCliente,
+      servicioNombre,
+      horaInicio,
+    });
+    setRecordando(false);
+    if (!resultado.ok) {
+      if (resultado.error) alert(resultado.error);
+      return;
+    }
+    setRecordado(true);
+  }
+
+  async function handleCancelar() {
+    setCancelando(true);
+    const resultado = await cancelarYAvisar(id, nombreCliente);
+    setCancelando(false);
+    if (!resultado.ok && resultado.error) alert(resultado.error);
+  }
 
   if (editando) {
     return (
@@ -93,21 +119,19 @@ export function TurnoCard({
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           {(puedeRecordar || recordado) && (
             <button
-              disabled={recordado}
-              onClick={() => {
-                recordarYMarcar({ id, nombreCliente, telefonoCliente, servicioNombre, horaInicio });
-                setRecordado(true);
-              }}
+              disabled={recordado || recordando}
+              onClick={handleRecordar}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 disabled:text-gray-300 disabled:hover:bg-transparent"
             >
               <Bell className="h-3.5 w-3.5" strokeWidth={1.8} />
-              {recordado ? "Recordado" : "Recordar"}
+              {recordando ? "Enviando..." : recordado ? "Recordado" : "Recordar"}
             </button>
           )}
           {estado !== "cancelado" && (
             <button
+              disabled={cancelando}
               onClick={() => setEditando(true)}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50"
             >
               <Pencil className="h-3.5 w-3.5" strokeWidth={1.8} />
               Editar
@@ -115,11 +139,12 @@ export function TurnoCard({
           )}
           {estado !== "cancelado" && (
             <button
-              onClick={() => cancelarYAvisar(id, nombreCliente)}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+              disabled={cancelando}
+              onClick={handleCancelar}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
             >
               <X className="h-3.5 w-3.5" strokeWidth={1.8} />
-              Cancelar
+              {cancelando ? "Cancelando..." : "Cancelar"}
             </button>
           )}
         </div>

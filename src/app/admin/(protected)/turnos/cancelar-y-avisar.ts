@@ -1,16 +1,36 @@
-import { construirLinkWhatsApp, construirMensajeCancelacion, construirMensajeRecordatorio } from "@/lib/whatsapp";
+import {
+  abrirPestanaEnBlanco,
+  completarPestanaWhatsApp,
+  construirMensajeCancelacion,
+  construirMensajeRecordatorio,
+} from "@/lib/whatsapp";
 import { cancelarTurno, marcarRecordatorioEnviado } from "./actions";
+
+export interface ResultadoAccion {
+  ok: boolean;
+  error?: string;
+}
 
 /**
  * Cancela un turno y le avisa al cliente por WhatsApp con horarios
  * alternativos. Usado desde TurnoCard.
  */
-export async function cancelarYAvisar(id: string, nombreCliente: string) {
-  if (!confirm(`¿Cancelar el turno de ${nombreCliente}?`)) return;
-  const info = await cancelarTurno(id);
-  if (!info) return;
-  const mensaje = construirMensajeCancelacion(info);
-  window.open(construirLinkWhatsApp(info.telefonoCliente, mensaje), "_blank", "noopener,noreferrer");
+export async function cancelarYAvisar(id: string, nombreCliente: string): Promise<ResultadoAccion> {
+  if (!confirm(`¿Cancelar el turno de ${nombreCliente}?`)) return { ok: false };
+
+  const pestana = abrirPestanaEnBlanco();
+  try {
+    const info = await cancelarTurno(id);
+    if (!info) {
+      pestana?.close();
+      return { ok: false, error: "No se encontró el turno." };
+    }
+    completarPestanaWhatsApp(pestana, info.telefonoCliente, construirMensajeCancelacion(info));
+    return { ok: true };
+  } catch (e) {
+    pestana?.close();
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo cancelar el turno." };
+  }
 }
 
 /**
@@ -26,14 +46,21 @@ export async function recordarYMarcar(params: {
   telefonoCliente: string;
   servicioNombre: string;
   horaInicio: string;
-}) {
-  const linkCancelacion = `${window.location.origin}/cancelar/${params.id}`;
-  const mensaje = construirMensajeRecordatorio({
-    nombreCliente: params.nombreCliente,
-    servicioNombre: params.servicioNombre,
-    horaInicio: params.horaInicio,
-    linkCancelacion,
-  });
-  window.open(construirLinkWhatsApp(params.telefonoCliente, mensaje), "_blank", "noopener,noreferrer");
-  await marcarRecordatorioEnviado(params.id);
+}): Promise<ResultadoAccion> {
+  const pestana = abrirPestanaEnBlanco();
+  try {
+    const linkCancelacion = `${window.location.origin}/cancelar/${params.id}`;
+    const mensaje = construirMensajeRecordatorio({
+      nombreCliente: params.nombreCliente,
+      servicioNombre: params.servicioNombre,
+      horaInicio: params.horaInicio,
+      linkCancelacion,
+    });
+    completarPestanaWhatsApp(pestana, params.telefonoCliente, mensaje);
+    await marcarRecordatorioEnviado(params.id);
+    return { ok: true };
+  } catch (e) {
+    pestana?.close();
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo marcar el recordatorio." };
+  }
 }

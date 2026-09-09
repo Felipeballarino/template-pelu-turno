@@ -9,6 +9,43 @@ export function construirLinkWhatsApp(telefono: string, mensaje: string): string
   return `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
 }
 
+/**
+ * Abre una pestaña en blanco YA (sincrónicamente, dentro del gesto del
+ * usuario que la dispara) para completarle la URL de WhatsApp más
+ * adelante con `completarPestanaWhatsApp`, una vez que se sepa (por
+ * ejemplo, después de esperar la respuesta de una acción del servidor).
+ *
+ * Si en cambio se llama a window.open() recién después de un await,
+ * algunos navegadores ya no lo consideran parte del gesto directo del
+ * usuario y lo bloquean en silencio, sin avisar — por eso conviene
+ * abrirla antes y completarla después, en vez de construir la URL final
+ * primero y abrir recién al final.
+ *
+ * No se le pasan las flags "noopener"/"noreferrer" a window.open porque
+ * con ellas el navegador siempre devuelve null (no habría cómo
+ * completarle la URL después); en su lugar se corta `opener` a mano acá
+ * mismo, que logra el mismo efecto de seguridad.
+ */
+export function abrirPestanaEnBlanco(): Window | null {
+  const pestana = window.open("", "_blank");
+  if (pestana) pestana.opener = null;
+  return pestana;
+}
+
+/** Completa (o cierra, si `telefono` es null) una pestaña abierta con abrirPestanaEnBlanco. */
+export function completarPestanaWhatsApp(
+  pestana: Window | null,
+  telefono: string | null | undefined,
+  mensaje: string
+) {
+  if (!pestana) return;
+  if (!telefono) {
+    pestana.close();
+    return;
+  }
+  pestana.location.href = construirLinkWhatsApp(telefono, mensaje);
+}
+
 export interface AlternativaTurno {
   fecha: string;
   hora: string;
