@@ -148,6 +148,120 @@ export async function obtenerHorariosDisponibles(params: {
   });
 }
 
+/**
+ * Para cada día entre `desde` y `hasta` (inclusive), dice si hay al menos
+ * un hueco disponible para esa combinación de peluquero/servicio/duración
+ * — se usa para deshabilitar en el mini-calendario los días en que nadie
+ * trabaja o ya no queda capacidad. Trae los datos de toda la ventana de
+ * una sola vez (en vez de llamar a obtenerHorariosDisponibles día por
+ * día) para no multiplicar las consultas a la base por ~30-42 días cada
+ * vez que se abre o cambia de mes el calendario.
+ */
+export async function obtenerDiasDisponibles(params: {
+  peluqueroId: string; // "" = cualquiera disponible
+  servicioId: string;
+  duracionMinutos: number;
+  desde: string; // YYYY-MM-DD
+  hasta: string; // YYYY-MM-DD
+}): Promise<string[]> {
+  const supabase = createAdminClient();
+
+  const [{ data: peluqueros }, { data: asignaciones }] = await Promise.all([
+    supabase.from("peluqueros").select("id, nombre").eq("activo", true).order("nombre"),
+    supabase.from("peluquero_servicios").select("peluquero_id, servicio_id"),
+  ]);
+  const indiceServicios = indiceServiciosPorPeluquero(asignaciones ?? []);
+
+  const candidatos = (peluqueros ?? []).filter((p) => {
+    if (params.peluqueroId && p.id !== params.peluqueroId) return false;
+    return peluqueroOfreceServicio(indiceServicios, p.id, params.servicioId);
+  });
+
+  if (candidatos.length === 0) return [];
+
+  const idsCandidatos = candidatos.map((p) => p.id);
+
+  const [{ data: horarios }, { data: bloqueos }, { data: turnos }] = await Promise.all([
+    supabase
+      .from("horarios_laborales")
+      .select("peluquero_id, dia_semana, hora_inicio, hora_fin")
+      .in("peluquero_id", idsCandidatos),
+    supabase
+      .from("bloqueos")
+      .select("peluquero_id, fecha, hora_inicio, hora_fin")
+      .in("peluquero_id", idsCandidatos)
+      .gte("fecha", params.desde)
+      .lte("fecha", params.hasta),
+    supabase
+      .from("turnos")
+      .select("peluquero_id, fecha, hora_inicio, hora_fin")
+      .in("peluquero_id", idsCandidatos)
+      .gte("fecha", params.desde)
+      .lte("fecha", params.hasta)
+      .neq("estado", "cancelado"),
+  ]);
+
+  const inicioDefault = minutosDesdeMedianoche(RANGO_DEFAULT_INICIO);
+  const finDefault = minutosDesdeMedianoche(RANGO_DEFAULT_FIN);
+  const hoy = hoyArgentina();
+  const horaActual = horaActualArgentinaEnMinutos();
+
+  const diasDisponibles: string[] = [];
+
+  for (let fecha = params.desde; fecha <= params.hasta; fecha = sumarDias(fecha, 1)) {
+    const diaSemana = new Date(`${fecha}T00:00:00Z`).getUTCDay();
+    const limiteInferior = fecha === hoy ? horaActual : 0;
+
+    const hayHueco = candidatos.some((peluquero) => {
+      const horariosPeluquero = (horarios ?? []).filter((h) => h.peluquero_id === peluquero.id);
+      const ventanas: Ventana[] =
+        horariosPeluquero.length > 0
+          ? horariosPeluquero
+              .filter((h) => h.dia_semana === diaSemana)
+              .map((h) => ({
+                inicio: minutosDesdeMedianoche(h.hora_inicio),
+                fin: minutosDesdeMedianoche(h.hora_fin),
+              }))
+          : [{ inicio: inicioDefault, fin: finDefault }];
+
+      if (ventanas.length === 0) return false;
+
+      const ocupados: Ventana[] = [
+        ...(bloqueos ?? [])
+          .filter((b) => b.peluquero_id === peluquero.id && b.fecha === fecha)
+          .map((b) => ({
+            inicio: minutosDesdeMedianoche(b.hora_inicio),
+            fin: minutosDesdeMedianoche(b.hora_fin),
+          })),
+        ...(turnos ?? [])
+          .filter((t) => t.peluquero_id === peluquero.id && t.fecha === fecha)
+          .map((t) => ({
+            inicio: minutosDesdeMedianoche(t.hora_inicio),
+            fin: minutosDesdeMedianoche(t.hora_fin),
+          })),
+      ];
+
+      return ventanas.some((ventana) => {
+        for (
+          let inicio = ventana.inicio;
+          inicio + params.duracionMinutos <= ventana.fin;
+          inicio += PASO_MINUTOS
+        ) {
+          if (inicio < limiteInferior) continue;
+          const fin = inicio + params.duracionMinutos;
+          const seSuperpone = ocupados.some((o) => o.inicio < fin && o.fin > inicio);
+          if (!seSuperpone) return true;
+        }
+        return false;
+      });
+    });
+
+    if (hayHueco) diasDisponibles.push(fecha);
+  }
+
+  return diasDisponibles;
+}
+
 export interface SlotConFecha extends SlotDisponible {
   fecha: string;
 }

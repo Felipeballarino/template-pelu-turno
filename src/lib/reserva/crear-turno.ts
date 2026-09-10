@@ -56,6 +56,22 @@ export async function crearTurnoEnBaseDeDatos(datos: DatosTurno): Promise<Result
   const telefonoCliente = normalizarTelefonoArgentino(datos.telefonoCliente);
   const supabase = createAdminClient();
 
+  // Un mismo cliente no puede tener dos turnos activos exactamente a la
+  // misma hora el mismo día (aunque sean con peluqueros distintos): la
+  // pantalla de reserva ya avisa de esto antes de llegar acá, esta es la
+  // validación real del lado del servidor.
+  const { data: turnoExistente } = await supabase
+    .from("turnos")
+    .select("id")
+    .eq("telefono_cliente", telefonoCliente)
+    .eq("fecha", datos.fecha)
+    .eq("hora_inicio", datos.horaInicio)
+    .neq("estado", "cancelado")
+    .maybeSingle();
+  if (turnoExistente) {
+    return { ok: false, error: "Ya tenés un turno reservado justo a esa hora." };
+  }
+
   const { data: servicio, error: errorServicio } = await supabase
     .from("servicios")
     .select("nombre, duracion_minutos")

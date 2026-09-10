@@ -10,6 +10,7 @@ import {
   type SlotDisponible,
 } from "@/lib/reserva/actions";
 import { crearPreferenciaMercadoPago } from "@/lib/reserva/mercadopago-actions";
+import { buscarTurnosPorTelefono, type TurnoBusqueda } from "@/lib/reserva/cancelacion-cliente";
 import { abrirPestanaEnBlanco } from "@/lib/whatsapp";
 import type { Peluquero, Servicio } from "@/types/database";
 import {
@@ -104,6 +105,12 @@ export function ReservaForm({
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [reserva, setReserva] = useState<TurnoConfirmado | null>(null);
+  // Turnos activos que ese mismo teléfono ya tiene reservados para el día
+  // elegido (se busca cuando el teléfono queda completo, ver efecto más
+  // abajo). Se usa para avisarle al cliente antes de confirmar, no para
+  // impedirle reservar más de un turno por día en general.
+  const [turnosMismoDia, setTurnosMismoDia] = useState<TurnoBusqueda[] | null>(null);
+  const [avisoAceptado, setAvisoAceptado] = useState(false);
 
   const servicio = servicios.find((s) => s.id === servicioId);
 
@@ -166,8 +173,47 @@ export function ReservaForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [servicioId, peluqueroId, fecha]);
 
+  // Apenas el teléfono queda completo, se busca si ese mismo cliente ya
+  // tiene otro turno activo ese día, para avisarle antes de que confirme
+  // (y, si coincide justo con el horario elegido, directamente impedírselo
+  // más abajo). Se repite si cambia el día o el horario elegido porque el
+  // aviso depende de esos datos.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAvisoAceptado(false);
+    if (telefonoCliente.length !== 10) {
+      setTurnosMismoDia(null);
+      return;
+    }
+    let cancelado = false;
+    buscarTurnosPorTelefono(telefonoCliente).then((turnos) => {
+      if (!cancelado) setTurnosMismoDia(turnos.filter((t) => t.fecha === fecha));
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [telefonoCliente, fecha]);
+
+  // Turno que ese mismo cliente ya tiene justo al horario elegido: no se
+  // le deja reservar otro encima (distinto del aviso de abajo, que sí lo
+  // deja seguir si confirma que quiere igual).
+  const turnoEnElMismoHorario = turnosMismoDia?.find((t) => t.horaInicio === slotElegido?.hora);
+  // Cualquier otro turno activo ese día, a otra hora: no bloquea, pero se
+  // le avisa al cliente y tiene que confirmar que quiere reservar igual.
+  const otrosTurnosEseDia = (turnosMismoDia ?? []).filter(
+    (t) => t.horaInicio !== slotElegido?.hora
+  );
+
   async function confirmar() {
-    if (!servicio || !slotElegido || !nombreCliente.trim() || !telefonoCliente.trim()) return;
+    if (
+      !servicio ||
+      !slotElegido ||
+      !nombreCliente.trim() ||
+      telefonoCliente.length !== 10 ||
+      turnoEnElMismoHorario ||
+      (otrosTurnosEseDia.length > 0 && !avisoAceptado)
+    )
+      return;
     setEnviando(true);
     setErrorEnvio(null);
 
@@ -222,7 +268,15 @@ export function ReservaForm({
   }
 
   async function pagarConMercadoPago() {
-    if (!servicio || !slotElegido || !nombreCliente.trim() || !telefonoCliente.trim()) return;
+    if (
+      !servicio ||
+      !slotElegido ||
+      !nombreCliente.trim() ||
+      telefonoCliente.length !== 10 ||
+      turnoEnElMismoHorario ||
+      (otrosTurnosEseDia.length > 0 && !avisoAceptado)
+    )
+      return;
     if (!confirm(MENSAJE_SIN_REEMBOLSO + "\n\n¿Confirmás que querés pagar ahora?")) return;
 
     setPagandoConMp(true);
@@ -258,7 +312,9 @@ export function ReservaForm({
     Boolean(servicio) &&
     Boolean(slotElegido) &&
     nombreCliente.trim().length > 0 &&
-    telefonoCliente.trim().length > 0;
+    telefonoCliente.length === 10 &&
+    !turnoEnElMismoHorario &&
+    (otrosTurnosEseDia.length === 0 || avisoAceptado);
 
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-8">
@@ -435,7 +491,14 @@ export function ReservaForm({
         {paso === 3 && servicio && (
           <motion.section key="paso-3" {...transicionPaso} className="space-y-2">
             <h2 className="text-sm font-medium text-gray-700">¿Qué día?</h2>
-            <MiniCalendario value={fecha} minFecha={hoyArgentina()} onChange={setFecha} />
+            <MiniCalendario
+              value={fecha}
+              minFecha={hoyArgentina()}
+              onChange={setFecha}
+              peluqueroId={peluqueroId}
+              servicioId={servicio?.id}
+              duracionMinutos={servicio?.duracion_minutos}
+            />
 
             <div className="pt-2">
               {cargandoSlots && (
@@ -531,14 +594,76 @@ export function ReservaForm({
                 </span>
                 <input
                   type="tel"
+                  inputMode="numeric"
                   placeholder="3534196213"
                   value={telefonoCliente}
-                  onChange={(e) => setTelefonoCliente(e.target.value)}
+                  onChange={(e) => setTelefonoCliente(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  maxLength={10}
+                  required
+                  aria-required="true"
                   className="min-w-0 flex-1 px-3 py-2 text-sm outline-none"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-400">Código de área + número, sin 0 ni 15.</p>
+              <p
+                className={`mt-1 text-xs ${
+                  telefonoCliente.length > 0 && telefonoCliente.length !== 10
+                    ? "text-red-600"
+                    : "text-gray-400"
+                }`}
+              >
+                Código de área + número, sin 0 ni 15. Deben ser 10 números
+                {telefonoCliente.length > 0 ? ` (${telefonoCliente.length}/10)` : ""}.
+              </p>
             </div>
+
+            {turnoEnElMismoHorario && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                Ya tenés un turno reservado justo a esa hora: {turnoEnElMismoHorario.servicioNombre}{" "}
+                con {turnoEnElMismoHorario.peluqueroNombre} a las{" "}
+                {turnoEnElMismoHorario.horaInicio.slice(0, 5)}hs. Elegí otro horario para
+                continuar.
+              </div>
+            )}
+
+            {!turnoEnElMismoHorario && otrosTurnosEseDia.length > 0 && !avisoAceptado && (
+              <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                <p>
+                  Ya tenés {otrosTurnosEseDia.length === 1 ? "un turno" : "otros turnos"} ese
+                  día:
+                </p>
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {otrosTurnosEseDia.map((t) => (
+                    <li key={t.id}>
+                      {t.servicioNombre} con {t.peluqueroNombre} a las{" "}
+                      {t.horaInicio.slice(0, 5)}hs
+                    </li>
+                  ))}
+                </ul>
+                <p>¿Querés reservar este turno igual?</p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAvisoAceptado(true)}
+                    className="flex-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700"
+                  >
+                    Sí, continuar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaso(3)}
+                    className="flex-1 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                  >
+                    Elegir otro horario
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!turnoEnElMismoHorario && otrosTurnosEseDia.length > 0 && avisoAceptado && (
+              <p className="text-xs text-amber-700">
+                Vas a reservar este turno además del que ya tenías ese día.
+              </p>
+            )}
 
             {errorEnvio && <p className="text-sm text-red-600">{errorEnvio}</p>}
 

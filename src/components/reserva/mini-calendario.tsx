@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { grillaMes, inicioMes, mesAnterior, mesSiguiente, nombreMes } from "@/lib/semana";
+import { obtenerDiasDisponibles } from "@/lib/reserva/actions";
 
 const DIAS_CORTOS = ["L", "M", "M", "J", "V", "S", "D"];
 
@@ -10,13 +11,55 @@ interface MiniCalendarioProps {
   value: string; // YYYY-MM-DD
   minFecha: string; // YYYY-MM-DD, días anteriores quedan deshabilitados
   onChange: (fecha: string) => void;
+  /**
+   * Si se pasan servicioId y duracionMinutos, además se deshabilitan los
+   * días en que nadie trabaja o ya no queda capacidad para esa combinación
+   * (peluqueroId "" = cualquiera disponible, igual que en el resto de la
+   * reserva).
+   */
+  peluqueroId?: string;
+  servicioId?: string;
+  duracionMinutos?: number;
 }
 
-export function MiniCalendario({ value, minFecha, onChange }: MiniCalendarioProps) {
+export function MiniCalendario({
+  value,
+  minFecha,
+  onChange,
+  peluqueroId,
+  servicioId,
+  duracionMinutos,
+}: MiniCalendarioProps) {
   const [mesVisible, setMesVisible] = useState(inicioMes(value));
+  const [diasDisponibles, setDiasDisponibles] = useState<Set<string> | null>(null);
 
   const dias = grillaMes(mesVisible);
   const puedeRetroceder = inicioMes(mesAnterior(mesVisible)) >= inicioMes(minFecha);
+
+  // Se recalcula cada vez que cambia el mes visible o la combinación de
+  // servicio/peluquero. Si todavía no hay servicio elegido, no se
+  // deshabilita nada por capacidad (solo rige el mínimo de fecha).
+  useEffect(() => {
+    if (!servicioId || !duracionMinutos) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDiasDisponibles(null);
+      return;
+    }
+    let cancelado = false;
+    obtenerDiasDisponibles({
+      peluqueroId: peluqueroId ?? "",
+      servicioId,
+      duracionMinutos,
+      desde: dias[0].fecha,
+      hasta: dias[dias.length - 1].fecha,
+    }).then((resultado) => {
+      if (!cancelado) setDiasDisponibles(new Set(resultado));
+    });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mesVisible, peluqueroId, servicioId, duracionMinutos]);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -64,7 +107,8 @@ export function MiniCalendario({ value, minFecha, onChange }: MiniCalendarioProp
 
       <div className="grid grid-cols-7 gap-1">
         {dias.map((dia) => {
-          const deshabilitado = dia.fecha < minFecha;
+          const sinCapacidad = diasDisponibles !== null && !diasDisponibles.has(dia.fecha);
+          const deshabilitado = dia.fecha < minFecha || sinCapacidad;
           const elegido = dia.fecha === value;
           return (
             <motion.button
