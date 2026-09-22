@@ -320,7 +320,9 @@ export function ReservaForm({
     <div className="mx-auto max-w-lg space-y-6 px-4 py-8">
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Reservar turno</h1>
-        <p className="text-sm text-gray-500">Pagás en el local o ahora con Mercado Pago.</p>
+        <p className="text-sm text-gray-500">
+          {mercadoPagoHabilitado ? "Pagás en el local o ahora con Mercado Pago." : "Se paga en efectivo en el local."}
+        </p>
       </div>
 
       {bannerPago === "exitoso" && (

@@ -47,7 +47,14 @@ export async function actualizarPeluquero(id: string, formData: FormData) {
 export async function eliminarPeluquero(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("peluqueros").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "23503") {
+      throw new Error(
+        "No se puede eliminar: este peluquero tiene turnos asociados. Desactivalo en su lugar."
+      );
+    }
+    throw new Error(error.message);
+  }
 
   revalidatePath("/admin/peluqueros");
 }

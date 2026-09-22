@@ -15,7 +15,8 @@ export default async function Home() {
       servicios={servicios ?? []}
       peluqueros={peluqueros ?? []}
       asignaciones={asignaciones ?? []}
-      mercadoPagoHabilitado={Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN)}
+      // Pago con Mercado Pago desactivado por el momento: solo se paga en el local.
+      mercadoPagoHabilitado={false}
     />
   );
 }

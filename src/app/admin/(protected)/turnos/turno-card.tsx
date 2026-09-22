@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bell, X, Phone, Pencil } from "lucide-react";
-import { formatearHora } from "@/lib/date";
+import { formatearHora, formatearFechaCorta } from "@/lib/date";
 import { cancelarYAvisar, recordarYMarcar } from "./cancelar-y-avisar";
 import { ESTADO_ESTILOS, ESTADO_LABELS, type TurnoRowProps } from "./turno-row";
 import { EditarTurnoForm } from "./editar-turno-form";
@@ -13,6 +13,7 @@ interface TurnoCardProps extends TurnoRowProps {
   peluqueros: Peluquero[];
   servicios: Servicio[];
   asignaciones: AsignacionServicio[];
+  mostrarFecha?: boolean;
 }
 
 /** Tarjeta de turno, usada tanto en celular como en escritorio. */
@@ -33,6 +34,7 @@ export function TurnoCard({
   peluqueros,
   servicios,
   asignaciones,
+  mostrarFecha,
 }: TurnoCardProps) {
   const [recordado, setRecordado] = useState(false);
   const [recordando, setRecordando] = useState(false);
@@ -96,6 +98,12 @@ export function TurnoCard({
         <p className="truncate text-sm font-semibold text-gray-900">{nombreCliente}</p>
         <p className="truncate text-sm text-gray-500">{servicioNombre}</p>
         <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-gray-400">
+          {mostrarFecha && (
+            <>
+              <span className="shrink-0 capitalize">{formatearFechaCorta(fecha)}</span>
+              <span aria-hidden>·</span>
+            </>
+          )}
           <span className="truncate">{peluqueroNombre}</span>
           <span aria-hidden>·</span>
           <Phone className="h-3 w-3 shrink-0" strokeWidth={1.8} />

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Trash2, Phone, Check, X, User } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2, Phone, Check, X, User, CalendarClock } from "lucide-react";
 import type { Peluquero, Servicio } from "@/types/database";
 import { actualizarPeluquero, eliminarPeluquero } from "./actions";
 import { ServiciosDelPeluquero } from "./servicios-del-peluquero";
 import { FotoInput } from "../foto-input";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 interface PeluqueroRowProps {
   peluquero: Peluquero;
@@ -17,16 +19,19 @@ interface PeluqueroRowProps {
 export function PeluqueroRow({ peluquero, servicios, serviciosAsignadosIds }: PeluqueroRowProps) {
   const [editando, setEditando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const [eliminando, startEliminar] = useTransition();
   const [pendienteGuardar, startGuardar] = useTransition();
 
   function handleEliminar() {
-    if (!confirm(`¿Eliminar a ${peluquero.nombre}? Esta acción no se puede deshacer.`)) return;
+    setErrorEliminar(null);
     startEliminar(async () => {
       try {
         await eliminarPeluquero(peluquero.id);
+        setConfirmandoEliminar(false);
       } catch (e) {
-        alert(e instanceof Error ? e.message : "No se pudo eliminar el peluquero.");
+        setErrorEliminar(e instanceof Error ? e.message : "No se pudo eliminar el peluquero.");
       }
     });
   }
@@ -143,6 +148,13 @@ export function PeluqueroRow({ peluquero, servicios, serviciosAsignadosIds }: Pe
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <Link
+            href={`/admin/turnos?peluquero_id=${peluquero.id}&vista=historial`}
+            title="Ver turnos"
+            className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+          >
+            <CalendarClock className="h-4 w-4" strokeWidth={1.8} />
+          </Link>
           <button
             onClick={() => setEditando(true)}
             title="Editar"
@@ -151,7 +163,10 @@ export function PeluqueroRow({ peluquero, servicios, serviciosAsignadosIds }: Pe
             <Pencil className="h-4 w-4" strokeWidth={1.8} />
           </button>
           <button
-            onClick={handleEliminar}
+            onClick={() => {
+              setErrorEliminar(null);
+              setConfirmandoEliminar(true);
+            }}
             disabled={eliminando}
             title="Eliminar"
             className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
@@ -161,6 +176,8 @@ export function PeluqueroRow({ peluquero, servicios, serviciosAsignadosIds }: Pe
         </div>
       </div>
 
+      {errorEliminar && <p className="mt-2 text-sm text-red-600">{errorEliminar}</p>}
+
       <div className="mt-3 border-t border-gray-100 pt-3">
         <ServiciosDelPeluquero
           peluqueroId={peluquero.id}
@@ -168,6 +185,15 @@ export function PeluqueroRow({ peluquero, servicios, serviciosAsignadosIds }: Pe
           asignadosIds={serviciosAsignadosIds}
         />
       </div>
+
+      <ConfirmDialog
+        open={confirmandoEliminar}
+        title={`¿Eliminar a ${peluquero.nombre}?`}
+        description="Esta acción no se puede deshacer."
+        pending={eliminando}
+        onConfirm={handleEliminar}
+        onCancel={() => setConfirmandoEliminar(false)}
+      />
     </div>
   );
 }
